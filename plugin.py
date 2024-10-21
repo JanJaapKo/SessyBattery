@@ -160,7 +160,7 @@ class SessyBattery():
 
     def GetDataFromDevice(self):
        response = requests.get(self.url)
-       jsonData = json.loads(response.text)
+       # jsonData = json.loads(response.text)
        return response.json()
 
     @property

@@ -9,7 +9,6 @@ The following Python modules installed
 ```
 sudo apt-get update
 sudo apt-get install python3-requests
-sudo pip3 install numpy
 ```
 
 ## Installation
@@ -29,4 +28,5 @@ git pull https://github.com/JanJaapKo/SessyBattery
 
 
 ## Configuration
-At first setup, the plugin needs to connect to the Dyson cloud provider to get the credentials to acces the machine. Since early 2021 a 2-factor authentication is 
+First fill the ```config.json``` file in the plugin directory with the connection details for the batteries and the P1 unit.
+Then create the hardware needed in the Domoticz hardware page. Default configuration works, but can be altered when desired.
