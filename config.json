@@ -1,0 +1,24 @@
+{
+	"p1meter": [
+        {
+            "name": "P1 meter",
+            "ip": "192.168.1.10",
+            "user": "ABCD1234",
+            "pwd": "ABCD1234"
+        }
+    ],
+	"batteries":[
+		{
+			"name": "Sessy L1",
+			"ip": "192.168.1.11",
+			"user": "ABCD1234",
+			"pwd": "ABCD1234"
+		},
+		{
+			"name": "Sessy L2",
+			"ip": "192.168.1.12",
+			"user": "ABCD1234",
+			"pwd": "ABCD1234"
+		}
+	]
+}
