@@ -1,6 +1,9 @@
 # Sessy Battery - Domoticz Python plugin
 Domoticz plugin for Sessy batteries
 
+Preliminary version, breaking changes to be expected!
+reads state and percentage of batteries
+
 ## Prerequisites
 
 - Follow the Domoticz guide on [Using Python Plugins](https://www.domoticz.com/wiki/Using_Python_plugins) to enable the plugin framework.
