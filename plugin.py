@@ -138,9 +138,11 @@ class SessyBatteryPlugin:
         for battery in config_map["batteries"]:
             self.devices_dict[battery["name"]] = SessyBattery(battery)
             self.createBatteryUnits(battery["name"])
-            data = self.devices_dict[battery["name"]].GetDataFromDevice()
-            Domoticz.Debug("initial data query '" + battery["name"] + "': " + str(data))
+            data = self.devices_dict[battery["name"]].GetDataFromDevice('/api/v1/power/status')
+            Domoticz.Debug("initial data query power status '" + battery["name"] + "': " + str(data))
             self.updateBatteryUnits(battery["name"], data)
+            data = self.devices_dict[battery["name"]].GetDataFromDevice('/api/v1/energy/status')
+            Domoticz.Debug("initial data query energy status '" + battery["name"] + "': " + str(data))
         
         #create system units
         self.createSystemUnits("Sessy system")
@@ -154,7 +156,7 @@ class SessyBatteryPlugin:
             self.runCounter = int(Parameters['Mode2'])
             for battery in self.devices_dict:
                 Domoticz.Debug("polling battery: '" +battery+"'")
-                data = self.devices_dict[battery].GetDataFromDevice()
+                data = self.devices_dict[battery].GetDataFromDevice('/api/v1/power/status')
                 self.updateBatteryUnits(battery, data)
             self.updateSystemUnits("Sessy system", len(self.devices_dict))
 
@@ -183,7 +185,7 @@ class SessyBatteryPlugin:
         if deviceId not in Devices or (self.batBatteryDetailedStateUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery detailed state', Unit=self.batBatteryDetailedStateUnit, TypeName="General", Subtype=19, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batPowerUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Battery output power', Unit=self.batPowerUnit, Type=243, Subtype=29, Switchtype=4, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Battery in/output power', Unit=self.batPowerUnit, Type=250, Subtype=1, DeviceID=deviceId).Create()
 
     def updateBatteryUnits(self, deviceId, data):
         Domoticz.Debug("Updating units for: '" + deviceId +"'")
@@ -199,7 +201,16 @@ class SessyBatteryPlugin:
                     UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, str(data["sessy"]["system_state_details"]))
                 else:
                     UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, "all ok")
-                    
+                # needs to be taken from energy api
+                # if "power" in data["sessy"]:
+                    # power_absorbed = 0
+                    # power_delivered = 0
+                    # if data["sessy"]["power"] < 0:
+                        # power_absorbed = data["sessy"]["power"]
+                    # else:
+                        # power_delivered = data["sessy"]["power"]
+                    # UpdateDevice(deviceId, self.batPowerUnit, 1, str(data["sessy"]["system_state_details"]))
+                
         return
 
     def createSystemUnits(self, deviceId):
@@ -220,10 +231,10 @@ class SessyBattery():
         self.ip = config["ip"]
         self.user = config["user"]
         self.pwd = config["pwd"]
-        self.url = 'http://'+ self.user + ':' + self.pwd + '@' + self.ip + '/api/v1/power/status'
+        self.base_url = 'http://'+ self.user + ':' + self.pwd + '@' + self.ip 
 
-    def GetDataFromDevice(self):
-       response = requests.get(self.url)
+    def GetDataFromDevice(self, api):
+       response = requests.get(self.base_url + api)
        #jsonData = json.loads(response.text)
        return response.json()
 
@@ -267,9 +278,9 @@ def onHeartbeat():
     global _plugin
     _plugin.onHeartbeat()
 
-def onDeviceRemoved(DeviceID, Unit):
-    global _plugin
-    _plugin.onDeviceRemoved(DeviceID, Unit)
+# def onDeviceRemoved(DeviceID, Unit):
+    # global _plugin
+    # _plugin.onDeviceRemoved(DeviceID, Unit)
        
 # Configuration Helpers
 def getConfigItem(Key=None, Default={}):
