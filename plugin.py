@@ -180,7 +180,7 @@ class SessyBatteryPlugin:
     def updateBatteryUnits(self, device, data):
         if "sessy" in data:
                 if "state_of_charge" in data["sessy"]:
-                    UpdateDevice(device, self.batPercentageUnit, data["sessy"]["state_of_charge"], str(data["sessy"]["state_of_charge"]))
+                    UpdateDevice(device, self.batPercentageUnit, data["sessy"]["state_of_charge"]*100, str(data["sessy"]["state_of_charge"]*100))
                 if "system_state" in data["sessy"]:
                     UpdateDevice(device, self.batBatteryGeneralStateUnit, 1, str(data["sessy"]["system_state"]))
                 if "system_state_details" in data["sessy"]:
