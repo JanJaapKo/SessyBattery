@@ -109,6 +109,7 @@ class SessyBatteryPlugin:
         #read out parameters for local connection
         self.runCounter = int(Parameters['Mode2'])
         self.log_level = Parameters['Mode4']
+        self.systemPercent = 0
 
         if self.log_level == 'Debug':
             Domoticz.Debugging(2)
@@ -128,6 +129,7 @@ class SessyBatteryPlugin:
             config_map = json.load(f)
             Domoticz.Debug("config map = "+ str(config_map))
         
+        # create battery units
         self.num_batteries = len(config_map["batteries"])
         Domoticz.Log("Found " + str(self.num_batteries) + " batteries")
         
@@ -140,6 +142,9 @@ class SessyBatteryPlugin:
             Domoticz.Debug("initial data query '" + battery["name"] + "': " + str(data))
             self.updateBatteryUnits(battery["name"], data)
         
+        #create system units
+        self.createSystemUnits("Sessy system")
+        self.updateSystemUnits("Sessy system", len(config_map["batteries"]))
         return
 
     def onHeartbeat(self):
@@ -148,9 +153,10 @@ class SessyBatteryPlugin:
             Domoticz.Debug("Poll unit")
             self.runCounter = int(Parameters['Mode2'])
             for battery in self.devices_dict:
-                    Domoticz.Debug("polling battery: '" +battery+"'")
-                    data = self.devices_dict[battery].GetDataFromDevice()
-                    self.updateBatteryUnits(battery, data)
+                Domoticz.Debug("polling battery: '" +battery+"'")
+                data = self.devices_dict[battery].GetDataFromDevice()
+                self.updateBatteryUnits(battery, data)
+            self.updateSystemUnits("Sessy system", len(self.devices_dict))
 
         Domoticz.Debug("Polling unit in " + str(self.runCounter) + " heartbeats.")
         
@@ -176,21 +182,37 @@ class SessyBatteryPlugin:
             Domoticz.Unit(Name=deviceId + ' - Battery general state', Unit=self.batBatteryGeneralStateUnit, TypeName="General", Subtype=19, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batBatteryDetailedStateUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery detailed state', Unit=self.batBatteryDetailedStateUnit, TypeName="General", Subtype=19, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.batPowerUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery output power', Unit=self.batPowerUnit, Type=243, Subtype=29, Switchtype=4, DeviceID=deviceId).Create()
 
-    def updateBatteryUnits(self, device, data):
+    def updateBatteryUnits(self, deviceId, data):
+        Domoticz.Debug("Updating units for: '" + deviceId +"'")
         if "sessy" in data:
                 if "state_of_charge" in data["sessy"]:
                     #battery state of charge. Percentage with high number of decimals, needs to be trimmed
                     perc = round(data["sessy"]["state_of_charge"]*100,1)
-                    UpdateDevice(device, self.batPercentageUnit, perc, str(perc))
+                    self.systemPercent += perc
+                    UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
                 if "system_state" in data["sessy"]:
-                    UpdateDevice(device, self.batBatteryGeneralStateUnit, 1, str(data["sessy"]["system_state"]))
+                    UpdateDevice(deviceId, self.batBatteryGeneralStateUnit, 1, str(data["sessy"]["system_state"]))
                 if "system_state_details" in data["sessy"]:
-                    UpdateDevice(device, self.batBatteryDetailedStateUnit, 1, str(data["sessy"]["system_state_details"]))
+                    UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, str(data["sessy"]["system_state_details"]))
                 else:
-                    UpdateDevice(device, self.batBatteryDetailedStateUnit, 1, "all ok")
+                    UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, "all ok")
                     
         return
+
+    def createSystemUnits(self, deviceId):
+        #check, per device, if it has units. If not,create them 
+        Domoticz.Debug("Creating units for: '" + deviceId +"'")
+        if deviceId not in Devices or (self.batPercentageUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery percentage', Unit=self.batPercentageUnit, TypeName="General", Subtype=6, DeviceID=deviceId).Create()
+
+    def updateSystemUnits(self, deviceId, numBatteries):
+        Domoticz.Debug("Updating units for: '" + deviceId +"'")
+        perc = round(self.systemPercent / numBatteries, 1)
+        UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
+        self.systemPercent = 0
 
 class SessyBattery():
     def __init__(self, config):
