@@ -1,8 +1,13 @@
 # Sessy Battery - Domoticz Python plugin
 Domoticz plugin for Sessy batteries
 
-Preliminary version, breaking changes to be expected!
-reads state and percentage of batteries
+Preliminary version, breaking changes to be expected!<br>
+reads state and percentage of batteries<br><br>
+planned developments:
+- implement al measurements per battery
+- implement summary for all batteries (like total power, SoC etc)
+- implement data from p1 meter
+- implement OpenAPI spec to allow controlling the batteries from Domoticz
 
 ## Prerequisites
 
