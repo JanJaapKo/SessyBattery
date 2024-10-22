@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.3" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.4" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -180,7 +180,9 @@ class SessyBatteryPlugin:
     def updateBatteryUnits(self, device, data):
         if "sessy" in data:
                 if "state_of_charge" in data["sessy"]:
-                    UpdateDevice(device, self.batPercentageUnit, data["sessy"]["state_of_charge"]*100, str(data["sessy"]["state_of_charge"]*100))
+                    #battery state of charge. Percentage with high number of decimals, needs to be trimmed
+                    perc = round(data["sessy"]["state_of_charge"]*100,1)
+                    UpdateDevice(device, self.batPercentageUnit, perc, str(perc))
                 if "system_state" in data["sessy"]:
                     UpdateDevice(device, self.batBatteryGeneralStateUnit, 1, str(data["sessy"]["system_state"]))
                 if "system_state_details" in data["sessy"]:
