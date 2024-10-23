@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.4" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.5" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -138,15 +138,20 @@ class SessyBatteryPlugin:
         for battery in config_map["batteries"]:
             self.devices_dict[battery["name"]] = SessyBattery(battery)
             self.createBatteryUnits(battery["name"])
-            data = self.devices_dict[battery["name"]].GetDataFromDevice('/api/v1/power/status')
+            data = self.devices_dict[battery["name"]].getPowerStatus()
             Domoticz.Debug("initial data query power status '" + battery["name"] + "': " + str(data))
             self.updateBatteryUnits(battery["name"], data)
-            data = self.devices_dict[battery["name"]].GetDataFromDevice('/api/v1/energy/status')
+            data = self.devices_dict[battery["name"]].getEnergyStatus()
             Domoticz.Debug("initial data query energy status '" + battery["name"] + "': " + str(data))
         
         #create system units
         self.createSystemUnits("Sessy system")
         self.updateSystemUnits("Sessy system", len(config_map["batteries"]))
+
+        p1unit = SessyP1(config_map["p1meter"][0])
+        p1 = p1unit.getDetails()
+        Domoticz.Debug("P1 meter detais: " + str(p1))
+        Domoticz.Log("connected to P1 meter '" + p1unit.name + "', status is '"+ p1["status"] + "'")
         return
 
     def onHeartbeat(self):
@@ -225,23 +230,40 @@ class SessyBatteryPlugin:
         UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
         self.systemPercent = 0
 
-class SessyBattery():
+
+class SessyBase():
     def __init__(self, config):
+        Domoticz.Debug("init Sessy device: " + str(config))
         self.__name = config["name"]
         self.ip = config["ip"]
         self.user = config["user"]
         self.pwd = config["pwd"]
         self.base_url = 'http://'+ self.user + ':' + self.pwd + '@' + self.ip 
 
+    @property
+    def name(self):
+        return self.__name
+
     def GetDataFromDevice(self, api):
        response = requests.get(self.base_url + api)
        #jsonData = json.loads(response.text)
        return response.json()
 
-    @property
-    def name(self):
-        return self.__name
+class SessyBattery(SessyBase):
+    powerAPI = '/api/v1/power/status'
+    energyAPI = '/api/v1/energy/status'
 
+    def getPowerStatus(self):
+        return self.GetDataFromDevice(self.powerAPI)
+
+    def getEnergyStatus(self):
+        return self.GetDataFromDevice(self.energyAPI)
+
+class SessyP1(SessyBase):
+    detailsAPI = '/api/v2/p1/details'
+
+    def getDetails(self):
+        return self.GetDataFromDevice(self.detailsAPI)
 
 global _plugin
 _plugin = SessyBatteryPlugin()
