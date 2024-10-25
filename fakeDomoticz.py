@@ -8,7 +8,7 @@
 #   It also emulates the Device and Unit from the Ex framework
 #
 Devices = dict()
-Parameters = {"Mode1": "False", "Mode2": 1, "Mode3" : "0000-0000-0000", "Mode4": "Local", "Mode5": "", "Mode6": "Debug", "Port": 8443, "Username": "mail@domain.com" , "Password": "aNicerp@ssword", "Version" : "0.0.0", "HomeFolder":"/home/pi/domoticz/plugins/SessyBattery/"}
+Parameters = {"Mode1": "False", "Mode2": 1, "Mode3" : "0000-0000-0000", "Mode4": "Debug", "Mode5": "", "Mode6": "Debug", "Port": 8443, "Username": "mail@domain.com" , "Password": "aNicerp@ssword", "Version" : "0.0.0", "HomeFolder":"/home/pi/domoticz/plugins/SessyBattery/", "Name": "fakeDomoticz"}
 config = dict()
 
 class myUnit:

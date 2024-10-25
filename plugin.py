@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.5" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.6" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -27,7 +27,6 @@
                 <option label="Verbose" value="Verbose"/>
                 <option label="True" value="Debug"/>
                 <option label="False" value="Normal" default="true"/>
-                <option label="Reset cloud data" value="Reset"/>
             </options>
         </param>
         <param field="Mode2" label="Refresh interval" width="75px">
@@ -51,10 +50,12 @@ except ImportError:
     from fakeDomoticz import Domoticz
     Domoticz = Domoticz()
     debug = True
-
+import logging
 import json
 import time
 import requests
+
+P1_FACTOR = 10 # number of battery polls before polling P1
 
 class SessyBatteryPlugin:
     #define class variables
@@ -101,24 +102,32 @@ class SessyBatteryPlugin:
     batSerialUpdateUnit = 19
     # 20: Sensor type 'Text' and call it 'P1 meter update state'
     p1UpdateState = 20
+    # 21: sensor type 'Text', 'P1 tarif'
+    p1TarifUnit = 21
 
     runCounter = 6
+    p1Counter = P1_FACTOR
     
     def onStart(self):
-        Domoticz.Debug("onStart called")
+        self.log_filename = "sessy_"+Parameters["Name"]+".log"
+        Domoticz.Log('Plugin starting')
         #read out parameters for local connection
         self.runCounter = int(Parameters['Mode2'])
         self.log_level = Parameters['Mode4']
         self.systemPercent = 0
 
         if self.log_level == 'Debug':
+            logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
+            Domoticz.Log("Starting Sessy Battery plugin, logging to file {0}".format(self.log_filename))
             Domoticz.Debugging(2)
             DumpConfigToLog()
         if self.log_level == 'Verbose':
             Domoticz.Debugging(1+2+4+8+16+64)
             DumpConfigToLog()
+            logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
 
         Domoticz.Log("starting plugin version "+Parameters["Version"])
+        #logging.log("starting plugin version "+Parameters["Version"])
         Domoticz.Heartbeat(10)
         
         #read config parameters from disk
@@ -127,11 +136,12 @@ class SessyBatteryPlugin:
         config_map = ""
         with open(config_file) as f:
             config_map = json.load(f)
-            Domoticz.Debug("config map = "+ str(config_map))
+            logging.debug("config map = "+ str(config_map))
         
         # create battery units
         self.num_batteries = len(config_map["batteries"])
         Domoticz.Log("Found " + str(self.num_batteries) + " batteries")
+        #logging.log("Found " + str(self.num_batteries) + " batteries")
         
         self.devices_dict = {}
         devices_names = self.get_device_names(config_map)
@@ -139,36 +149,47 @@ class SessyBatteryPlugin:
             self.devices_dict[battery["name"]] = SessyBattery(battery)
             self.createBatteryUnits(battery["name"])
             data = self.devices_dict[battery["name"]].getPowerStatus()
-            Domoticz.Debug("initial data query power status '" + battery["name"] + "': " + str(data))
-            self.updateBatteryUnits(battery["name"], data)
-            data = self.devices_dict[battery["name"]].getEnergyStatus()
-            Domoticz.Debug("initial data query energy status '" + battery["name"] + "': " + str(data))
+            logging.debug("initial data query power status '" + battery["name"] + "': " + str(data))
+            energy = self.devices_dict[battery["name"]].getEnergyStatus()
+            self.updateBatteryUnits(battery["name"], data, energy)
+            logging.debug("initial data query energy status '" + battery["name"] + "': " + str(energy))
         
         #create system units
         self.createSystemUnits("Sessy system")
         self.updateSystemUnits("Sessy system", len(config_map["batteries"]))
 
-        p1unit = SessyP1(config_map["p1meter"][0])
-        p1 = p1unit.getDetails()
-        Domoticz.Debug("P1 meter detais: " + str(p1))
-        Domoticz.Log("connected to P1 meter '" + p1unit.name + "', status is '"+ p1["status"] + "'")
+        self.createP1Units("Sessy P1")
+        self.p1unit = SessyP1(config_map["p1meter"][0])
+        p1data = self.p1unit.getDetails()
+        logging.debug("P1 meter details: " + str(p1data))
+        Domoticz.Log("connected to P1 meter '" + self.p1unit.name + "', status is '"+ p1data["status"] + "'")
+        #logging.log("connected to P1 meter '" + self.p1unit.name + "', status is '"+ p1data["status"] + "'")
+        self.updateP1Units("Sessy P1", p1data)
         return
 
     def onHeartbeat(self):
         self.runCounter = self.runCounter - 1
         if self.runCounter <= 0:
-            Domoticz.Debug("Poll unit")
+            logging.debug("Poll unit")
             self.runCounter = int(Parameters['Mode2'])
             for battery in self.devices_dict:
-                Domoticz.Debug("polling battery: '" +battery+"'")
-                data = self.devices_dict[battery].GetDataFromDevice('/api/v1/power/status')
-                self.updateBatteryUnits(battery, data)
+                logging.debug("polling battery: '" +battery+"'")
+                powerData = self.devices_dict[battery].getPowerStatus()
+                energyData = self.devices_dict[battery].getEnergyStatus()
+                self.updateBatteryUnits(battery, powerData, energyData)
             self.updateSystemUnits("Sessy system", len(self.devices_dict))
 
-        Domoticz.Debug("Polling unit in " + str(self.runCounter) + " heartbeats.")
+            self.p1Counter = self.p1Counter - 1
+            if self.p1Counter <= 0:
+                self.p1Counter = P1_FACTOR
+                p1data = self.p1unit.getDetails()
+                logging.debug("P1 meter details: " + str(p1data))
+                self.updateP1Units("Sessy P1", p1data)
+
+        logging.debug("Polling unit in " + str(self.runCounter) + " heartbeats.")
         
     def onStop(self):
-        Domoticz.Debug("stopping plugin")
+        logging.debug("stopping plugin")
 
     def get_device_names(self, configmap):
         """find the amount of stored devices"""
@@ -177,12 +198,12 @@ class SessyBatteryPlugin:
             devices[str(x["name"])] = "p1meter"
         for x in configmap["batteries"]:
             devices[str(x["name"])] = "battery"
-        Domoticz.Debug("get_device_names, list of configured devices: " + str(devices))
+        logging.debug("get_device_names, list of configured devices: " + str(devices))
         return devices
 
     def createBatteryUnits(self, deviceId):
         #check, per device, if it has units. If not,create them 
-        Domoticz.Debug("Creating units for: '" + deviceId +"'")
+        logging.debug("Creating units for: '" + deviceId +"'")
         if deviceId not in Devices or (self.batPercentageUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery percentage', Unit=self.batPercentageUnit, TypeName="General", Subtype=6, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batBatteryGeneralStateUnit not in Devices[deviceId].Units):
@@ -192,48 +213,59 @@ class SessyBatteryPlugin:
         if deviceId not in Devices or (self.batPowerUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery in/output power', Unit=self.batPowerUnit, Type=250, Subtype=1, DeviceID=deviceId).Create()
 
-    def updateBatteryUnits(self, deviceId, data):
-        Domoticz.Debug("Updating units for: '" + deviceId +"'")
-        if "sessy" in data:
-                if "state_of_charge" in data["sessy"]:
-                    #battery state of charge. Percentage with high number of decimals, needs to be trimmed
-                    perc = round(data["sessy"]["state_of_charge"]*100,1)
-                    self.systemPercent += perc
-                    UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
-                if "system_state" in data["sessy"]:
-                    UpdateDevice(deviceId, self.batBatteryGeneralStateUnit, 1, str(data["sessy"]["system_state"]))
-                if "system_state_details" in data["sessy"]:
-                    UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, str(data["sessy"]["system_state_details"]))
-                else:
-                    UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, "all ok")
-                # needs to be taken from energy api
-                # if "power" in data["sessy"]:
-                    # power_absorbed = 0
-                    # power_delivered = 0
-                    # if data["sessy"]["power"] < 0:
-                        # power_absorbed = data["sessy"]["power"]
-                    # else:
-                        # power_delivered = data["sessy"]["power"]
-                    # UpdateDevice(deviceId, self.batPowerUnit, 1, str(data["sessy"]["system_state_details"]))
+    def updateBatteryUnits(self, deviceId, power, energy):
+        logging.debug("Updating units for: '" + deviceId +"'")
+        if "sessy" in power:
+            if "state_of_charge" in power["sessy"]:
+                #battery state of charge. Percentage with high number of decimals, needs to be trimmed
+                perc = round(power["sessy"]["state_of_charge"]*100,1)
+                self.systemPercent += perc
+                UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
+            if "system_state" in power["sessy"]:
+                UpdateDevice(deviceId, self.batBatteryGeneralStateUnit, 1, str(power["sessy"]["system_state"]))
+            if "system_state_details" in power["sessy"]:
+                UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, str(power["sessy"]["system_state_details"]))
+            else:
+                UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, "all ok")
+            # needs to be taken from energy api
+            # if "power" in power["sessy"]:
+                # power_absorbed = 0
+                # power_delivered = 0
+                # if data["sessy"]["power"] < 0:
+                    # power_absorbed = data["sessy"]["power"]
+                # else:
+                    # power_delivered = data["sessy"]["power"]
+                # UpdateDevice(deviceId, self.batPowerUnit, 1, str(data["sessy"]["system_state_details"]))
                 
         return
 
     def createSystemUnits(self, deviceId):
         #check, per device, if it has units. If not,create them 
-        Domoticz.Debug("Creating units for: '" + deviceId +"'")
+        logging.debug("Creating units for: '" + deviceId +"'")
         if deviceId not in Devices or (self.batPercentageUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery percentage', Unit=self.batPercentageUnit, TypeName="General", Subtype=6, DeviceID=deviceId).Create()
 
     def updateSystemUnits(self, deviceId, numBatteries):
-        Domoticz.Debug("Updating units for: '" + deviceId +"'")
+        logging.debug("Updating units for: '" + deviceId +"'")
         perc = round(self.systemPercent / numBatteries, 1)
         UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
         self.systemPercent = 0
 
+    def createP1Units(self, deviceId):
+        #check, per device, if it has units. If not,create them 
+        logging.debug("Creating units for: '" + deviceId +"'")
+        if deviceId not in Devices or (self.p1TarifUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Tarif', Unit=self.p1TarifUnit, TypeName="General", Subtype=19, DeviceID=deviceId).Create()
+
+    def updateP1Units(self, deviceId, data):
+        logging.debug("Updating units for: '" + deviceId +"'")
+        if "tariff_indicator" in data:
+            #1 is low tarif, 2 is high tarif
+            UpdateDevice(deviceId, self.p1TarifUnit, 1, str(data["tariff_indicator"]))
 
 class SessyBase():
     def __init__(self, config):
-        Domoticz.Debug("init Sessy device: " + str(config))
+        logging.debug("init Sessy device: " + str(config))
         self.__name = config["name"]
         self.ip = config["ip"]
         self.user = config["user"]
@@ -254,16 +286,22 @@ class SessyBattery(SessyBase):
     energyAPI = '/api/v1/energy/status'
 
     def getPowerStatus(self):
-        return self.GetDataFromDevice(self.powerAPI)
+        data = self.GetDataFromDevice(self.powerAPI)
+        logging.debug("power status for '" + str(SessyBase.name) + "': '"+str(data))
+        return data
 
     def getEnergyStatus(self):
-        return self.GetDataFromDevice(self.energyAPI)
+        data = self.GetDataFromDevice(self.energyAPI)
+        logging.debug("energy status for '" + str(SessyBase.name) + "': '"+str(data))
+        return data
 
 class SessyP1(SessyBase):
     detailsAPI = '/api/v2/p1/details'
 
     def getDetails(self):
-        return self.GetDataFromDevice(self.detailsAPI)
+        data = self.GetDataFromDevice(self.detailsAPI)
+        logging.debug("p1 status for '" + str(SessyBase.name) + "': '"+str(data))
+        return data
 
 global _plugin
 _plugin = SessyBatteryPlugin()
