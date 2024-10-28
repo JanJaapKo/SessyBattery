@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.6" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.7" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -212,6 +212,18 @@ class SessyBatteryPlugin:
             Domoticz.Unit(Name=deviceId + ' - Battery detailed state', Unit=self.batBatteryDetailedStateUnit, TypeName="General", Subtype=19, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batPowerUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery in/output power', Unit=self.batPowerUnit, Type=250, Subtype=1, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.batPhase1VoltageUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery voltage L1', DeviceID=deviceId, Unit=(self.batPhase1VoltageUnit), Type=243, Subtype=8).Create()
+        if deviceId not in Devices or (self.batPhase1CurrentUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery current L1', DeviceID=deviceId, Unit=(self.batPhase1CurrentUnit), Type=243, Subtype=23).Create()
+        if deviceId not in Devices or (self.batPhase2VoltageUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery voltage L2', DeviceID=deviceId, Unit=(self.batPhase2VoltageUnit), Type=243, Subtype=8).Create()
+        if deviceId not in Devices or (self.batPhase2CurrentUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery current L2', DeviceID=deviceId, Unit=(self.batPhase2CurrentUnit), Type=243, Subtype=23).Create()
+        if deviceId not in Devices or (self.batPhase3VoltageUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery voltage L3', DeviceID=deviceId, Unit=(self.batPhase3VoltageUnit), Type=243, Subtype=8).Create()
+        if deviceId not in Devices or (self.batPhase3CurrentUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery current L3', DeviceID=deviceId, Unit=(self.batPhase3CurrentUnit), Type=243, Subtype=23).Create()
 
     def updateBatteryUnits(self, deviceId, power, energy):
         logging.debug("Updating units for: '" + deviceId +"'")
@@ -227,6 +239,21 @@ class SessyBatteryPlugin:
                 UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, str(power["sessy"]["system_state_details"]))
             else:
                 UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, "all ok")
+        if "renewable_energy_phase1" in power:
+            if "voltage_rms" in power["renewable_energy_phase1"]:
+                UpdateDevice(deviceId, self.batPhase1VoltageUnit, 0, str(round(power["renewable_energy_phase1"]["voltage_rms"]/1000,0)))
+            if "current_rms" in power["renewable_energy_phase1"]:
+                UpdateDevice(deviceId, self.batPhase1CurrentUnit, 0, str(round(power["renewable_energy_phase1"]["current_rms"]/1000,1)))
+        if "renewable_energy_phase2" in power:
+            if "voltage_rms" in power["renewable_energy_phase2"]:
+                UpdateDevice(deviceId, self.batPhase2VoltageUnit, 0, str(round(power["renewable_energy_phase2"]["voltage_rms"]/1000,0)))
+            if "current_rms" in power["renewable_energy_phase1"]:
+                UpdateDevice(deviceId, self.batPhase2CurrentUnit, 0, str(round(power["renewable_energy_phase2"]["current_rms"]/1000,0)))
+        if "renewable_energy_phase3" in power:
+            if "voltage_rms" in power["renewable_energy_phase3"]:
+                UpdateDevice(deviceId, self.batPhase3VoltageUnit, 0, str(round(power["renewable_energy_phase3"]["voltage_rms"]/1000,0)))
+            if "current_rms" in power["renewable_energy_phase3"]:
+                UpdateDevice(deviceId, self.batPhase3CurrentUnit, 0, str(round(power["renewable_energy_phase3"]["current_rms"]/1000,1)))
             # needs to be taken from energy api
             # if "power" in power["sessy"]:
                 # power_absorbed = 0
@@ -277,6 +304,7 @@ class SessyBase():
         return self.__name
 
     def GetDataFromDevice(self, api):
+       logging.debug("get data from: " + self.base_url + api)
        response = requests.get(self.base_url + api)
        #jsonData = json.loads(response.text)
        return response.json()
@@ -395,7 +423,11 @@ def UpdateDevice(Device, Unit, nValue, sValue, AlwaysUpdate=False, Name=""):
         if (Devices[Device].Units[Unit].nValue != nValue) or (Devices[Device].Units[Unit].sValue != sValue) or AlwaysUpdate:
                 Domoticz.Log("Updating device '"+Devices[Device].Units[Unit].Name+ "' with current sValue '"+Devices[Device].Units[Unit].sValue+"' to '" +sValue+"'")
             #try:
-                Devices[Device].Units[Unit].nValue = nValue
+                if isinstance(nValue, int):
+                    Devices[Device].Units[Unit].nValue = nValue
+                else:
+                    Domoticz.Log("nValue supplied is not an integer. Device: "+str(Device)+ " unit "+str(Unit)+" nValue "+str(nValue))
+                    Devices[Device].Units[Unit].nValue = int(nValue)
                 Devices[Device].Units[Unit].sValue = sValue
                 if Name != "":
                     Devices[Device].Units[Unit].Name = Name
