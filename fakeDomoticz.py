@@ -12,9 +12,9 @@ Parameters = {"Mode1": "False", "Mode2": 1, "Mode3" : "0000-0000-0000", "Mode4":
 config = dict()
 
 class myUnit:
-    def __init__(self,Name="label", Unit=0, Type=0, TypeName ="", Subtype=0, Switchtype="", DeviceID="deviceURL", Used=0):
+    def __init__(self,Name="label", Unit=0, Type=0, TypeName ="", Subtype=0, Switchtype="", Options="", DeviceID="deviceURL", Used=0):
         self.Name=Name
-        self.Unit=Unit,
+        self.Unit=Unit
         self.Type=Type
         self.TypeName=TypeName
         self.Subtype=Subtype
@@ -23,7 +23,7 @@ class myUnit:
         self.Used=Used
 
     def Create(self):
-        print("Creating unit "+self.Name+" for deviceID "+self.DeviceID)
+        print("Creating unit "+str(self.Name)+" for deviceID "+str(self.DeviceID))
 
 class Domoticz:
     def __init__(self):
@@ -53,8 +53,8 @@ class Domoticz:
         self.Devices[DeviceID] = DeviceID
         print("creating DeviceID: "+ DeviceID)
 
-    def Unit(self, Name="label", Unit=0, Type=0, TypeName="", Subtype=0, Switchtype="", DeviceID="deviceURL", Used=0):
-        newUnit = myUnit(Name, Unit, Type, TypeName, Subtype, Switchtype, DeviceID, Used)
+    def Unit(self, Name="label", Unit=0, Type=0, TypeName="", Subtype=0, Switchtype="", Options="", DeviceID="deviceURL", Used=0):
+        newUnit = myUnit(Name, Unit, Type, TypeName, Subtype, Switchtype, Options, DeviceID, Used)
         #self.Devices[DeviceID].Units.append(newUnit)
         self.Units.append(newUnit)
         return newUnit
