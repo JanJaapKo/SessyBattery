@@ -249,8 +249,8 @@ class SessyBatteryPlugin:
             if "power" in powerData["sessy"] and "sessy_energy" in energyData:
                 #power going in (negative) or out (positive) of the battery
                 power = round(powerData["sessy"]["power"],1)
-                consPower = abs(power) if power > 0 else 0
-                prodPower = abs(power) if power < 0 else 0
+                consPower = abs(power) if power < 0 else 0 # negative power is going into battery
+                prodPower = abs(power) if power > 0 else 0 # positive power is going out of battery
                 self.systemPower += power
                 RETURN1 = str(energyData["sessy_energy"]["export_wh"])
                 USAGE1 = str(energyData["sessy_energy"]["import_wh"])
