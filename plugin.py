@@ -259,13 +259,12 @@ class SessyBatteryPlugin:
                 if power > 0:
                     self.systemPowerDelivered += power
                     self.systemPowerStored += 0
-                    UpdateDevice(deviceId, self.batEnergyDeliveredUnit, 0, str(abs(power))+";"+RETURN1) #str(energyData["sessy_energy"]["export_wh"]))
                 else:
                     self.systemPowerStored  += power
                     self.systemPowerDelivered += 0
-                    UpdateDevice(deviceId, self.batEnergyStoredUnit, 0, str(abs(power))+";"+USAGE1) #str(energyData["sessy_energy"]["import_wh"]))
+                UpdateDevice(deviceId, self.batEnergyDeliveredUnit, 0, str(prodPower)+";"+RETURN1) #str(energyData["sessy_energy"]["export_wh"]))
+                UpdateDevice(deviceId, self.batEnergyStoredUnit, 0, str(consPower)+";"+USAGE1) #str(energyData["sessy_energy"]["import_wh"]))
                 self.systemPower += power
-                powerString = USAGE1+";"+USAGE2+";"+RETURN1+";"+RETURN2+";"+str(consPower)+";"+str(prodPower)+";"+ datetime.now().strftime(dt_format)
                 powerString = USAGE1+";"+USAGE2+";"+RETURN1+";"+RETURN2+";"+str(consPower)+";"+str(prodPower)#+";"+ datetime.now().strftime(dt_format)
                 logging.debug("Powerstring = " + powerString)
                 UpdateDevice(deviceId, self.batPowerUnit, 0, powerString)
