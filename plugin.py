@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.10" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.11" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -108,6 +108,8 @@ class SessyBatteryPlugin:
     p1TarifUnit = 21
     # 22: sensor type '`P1 smart meter', 'Total energy'
     batEnergyUnit = 22
+    # 23: sensor type 'switch', 'Power strategy'
+    batStrategyUnit = 23
 
     runCounter = 6
     p1Counter = P1_FACTOR
@@ -122,6 +124,8 @@ class SessyBatteryPlugin:
         self.systemPower = 0
         self.systemPowerDelivered = 0
         self.systemPowerStored = 0
+        self.systemEnergyDelivered = 0
+        self.systemEnergyStored = 0
 
         if self.log_level == 'Debug':
             logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
@@ -223,7 +227,6 @@ class SessyBatteryPlugin:
         if deviceId not in Devices or (self.batBatteryDetailedStateUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery detailed state', Unit=self.batBatteryDetailedStateUnit, TypeName="General", Subtype=19, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batPowerUnit not in Devices[deviceId].Units):
-            # Domoticz.Unit(Name=deviceId + ' - Battery in/output power', Unit=self.batPowerUnit, Type=250, Subtype=1, Options={'EnergyMeterMode': '1' }, DeviceID=deviceId).Create()
             Domoticz.Unit(Name=deviceId + ' - Battery in/output power', Unit=self.batPowerUnit, Type=250, Subtype=1, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batPhase1VoltageUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery voltage L1', DeviceID=deviceId, Unit=(self.batPhase1VoltageUnit), Type=243, Subtype=8).Create()
@@ -251,21 +254,23 @@ class SessyBatteryPlugin:
                 power = round(powerData["sessy"]["power"],1)
                 consPower = abs(power) if power < 0 else 0 # negative power is going into battery
                 prodPower = abs(power) if power > 0 else 0 # positive power is going out of battery
-                self.systemPower += power
-                RETURN1 = str(energyData["sessy_energy"]["export_wh"])
-                USAGE1 = str(energyData["sessy_energy"]["import_wh"])
+                #self.systemPower += power
+                RETURN1 = energyData["sessy_energy"]["export_wh"]
+                USAGE1 = energyData["sessy_energy"]["import_wh"]
                 RETURN2 ="0"
                 USAGE2 ="0"
-                if power > 0:
-                    self.systemPowerDelivered += power
-                    self.systemPowerStored += 0
-                else:
-                    self.systemPowerStored  += power
-                    self.systemPowerDelivered += 0
-                UpdateDevice(deviceId, self.batEnergyDeliveredUnit, 0, str(prodPower)+";"+RETURN1) #str(energyData["sessy_energy"]["export_wh"]))
-                UpdateDevice(deviceId, self.batEnergyStoredUnit, 0, str(consPower)+";"+USAGE1) #str(energyData["sessy_energy"]["import_wh"]))
-                self.systemPower += power
-                powerString = USAGE1+";"+USAGE2+";"+RETURN1+";"+RETURN2+";"+str(consPower)+";"+str(prodPower)#+";"+ datetime.now().strftime(dt_format)
+                #if power > 0:
+                self.systemPowerDelivered += prodPower
+                self.systemPowerStored += consPower
+                self.systemEnergyDelivered += RETURN1
+                self.systemEnergyStored += USAGE1
+                # else:
+                    # self.systemPowerStored  += power
+                    # self.systemPowerDelivered += 0
+                UpdateDevice(deviceId, self.batEnergyDeliveredUnit, 0, str(prodPower)+";"+str(RETURN1)) 
+                UpdateDevice(deviceId, self.batEnergyStoredUnit, 0, str(consPower)+";"+str(USAGE1)) 
+                #self.systemPower += power
+                powerString = str(USAGE1)+";"+USAGE2+";"+str(RETURN1)+";"+RETURN2+";"+str(consPower)+";"+str(prodPower)
                 logging.debug("Powerstring = " + powerString)
                 UpdateDevice(deviceId, self.batPowerUnit, 0, powerString)
             if "system_state" in powerData["sessy"]:
@@ -289,15 +294,6 @@ class SessyBatteryPlugin:
                 UpdateDevice(deviceId, self.batPhase3VoltageUnit, 0, str(round(powerData["renewable_energy_phase3"]["voltage_rms"]/1000,0)))
             if "current_rms" in powerData["renewable_energy_phase3"]:
                 UpdateDevice(deviceId, self.batPhase3CurrentUnit, 0, str(round(powerData["renewable_energy_phase3"]["current_rms"]/1000,1)))
-            # needs to be taken from energy api
-            # if "power" in powerData["sessy"]:
-                # power_absorbed = 0
-                # power_delivered = 0
-                # if data["sessy"]["power"] < 0:
-                    # power_absorbed = data["sessy"]["power"]
-                # else:
-                    # power_delivered = data["sessy"]["power"]
-                # UpdateDevice(deviceId, self.batPowerUnit, 1, str(data["sessy"]["system_state_details"]))
                 
         return
 
@@ -308,31 +304,29 @@ class SessyBatteryPlugin:
             Domoticz.Unit(Name=deviceId + ' - Battery percentage', Unit=self.batPercentageUnit, TypeName="General", Subtype=6, Used=1, DeviceID=deviceId).Create()
         # if deviceId not in Devices or (self.batEnergyUnit not in Devices[deviceId].Units):
             # Domoticz.Unit(Name=deviceId + ' - Battery energy', Unit=self.batEnergyUnit, TypeName="P1 Smart Meter", Subtype=1, Used=1, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.batPowerUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery in/output power', Unit=self.batPowerUnit, Type=250, Subtype=1, Used=1, DeviceID=deviceId).Create()
 
     def updateSystemUnits(self, deviceId, numBatteries):
         logging.debug("Updating units for: '" + deviceId +"'")
         perc = round(self.systemPercent / numBatteries, 1)
         UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
 
-        if self.p1unit.tarif == 1:
-            USAGE1 = self.systemPowerStored
-            USAGE2 = 0
-            RETURN1 = self.systemPowerDelivered
-            RETURN2 = 0
-        else:
-            USAGE1 = 0
-            USAGE2 = self.systemPowerStored
-            RETURN1 = 0
-            RETURN2 = self.systemPowerDelivered
+        USAGE1 = self.systemEnergyStored
+        USAGE2 = 0
+        RETURN1 = self.systemEnergyDelivered
+        RETURN2 = 0
         CONS = self.systemPowerStored
         PROD = self.systemPowerDelivered
-        powerString = str(USAGE1) +";"+ str(USAGE2) +";"+ str(RETURN1) +";"+ str(RETURN2) +";"+ str(CONS) + ";"+ str(PROD) +";"+ datetime.now().strftime(dt_format)
+        powerString = str(USAGE1) +";"+ str(USAGE2) +";"+ str(RETURN1) +";"+ str(RETURN2) +";"+ str(CONS) + ";"+ str(PROD) #+";"+ datetime.now().strftime(dt_format)
         logging.debug("compiled powerString: "+powerString)
-        #UpdateDevice(deviceId, self.batPowerUnit, 0, powerString)
+        UpdateDevice(deviceId, self.batPowerUnit, 0, powerString)
         self.systemPercent = 0
-        self.systemPower = 0
+        #self.systemPower = 0
         self.systemPowerDelivered = 0
         self.systemPowerStored = 0
+        self.systemEnergyDelivered = 0
+        self.systemEnergyStored = 0
         
 
     def createP1Units(self, deviceId):
