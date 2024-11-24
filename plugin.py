@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.11" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.12" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -251,10 +251,10 @@ class SessyBatteryPlugin:
                 UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
             if "power" in powerData["sessy"] and "sessy_energy" in energyData:
                 #power going in (negative) or out (positive) of the battery
-                power = round(powerData["sessy"]["power"],1)
+                power = round(powerData["sessy"]["power"],1) * -1 #domoticz wants it ithe other way around, apparantly.....
                 consPower = abs(power) if power < 0 else 0 # negative power is going into battery
                 prodPower = abs(power) if power > 0 else 0 # positive power is going out of battery
-                #self.systemPower += power
+                self.systemPower += power
                 RETURN1 = energyData["sessy_energy"]["export_wh"]
                 USAGE1 = energyData["sessy_energy"]["import_wh"]
                 RETURN2 ="0"
@@ -269,7 +269,6 @@ class SessyBatteryPlugin:
                     # self.systemPowerDelivered += 0
                 UpdateDevice(deviceId, self.batEnergyDeliveredUnit, 0, str(prodPower)+";"+str(RETURN1)) 
                 UpdateDevice(deviceId, self.batEnergyStoredUnit, 0, str(consPower)+";"+str(USAGE1)) 
-                #self.systemPower += power
                 powerString = str(USAGE1)+";"+USAGE2+";"+str(RETURN1)+";"+RETURN2+";"+str(consPower)+";"+str(prodPower)
                 logging.debug("Powerstring = " + powerString)
                 UpdateDevice(deviceId, self.batPowerUnit, 0, powerString)
@@ -302,8 +301,11 @@ class SessyBatteryPlugin:
         logging.debug("Creating units for: '" + deviceId +"'")
         if deviceId not in Devices or (self.batPercentageUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery percentage', Unit=self.batPercentageUnit, TypeName="General", Subtype=6, Used=1, DeviceID=deviceId).Create()
-        # if deviceId not in Devices or (self.batEnergyUnit not in Devices[deviceId].Units):
-            # Domoticz.Unit(Name=deviceId + ' - Battery energy', Unit=self.batEnergyUnit, TypeName="P1 Smart Meter", Subtype=1, Used=1, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.batEnergyUnit not in Devices[deviceId].Units):
+            # set switchtype to 4/exporting as positive is going out of battery (so producing)
+            #Domoticz.Unit(Name=deviceId + ' - Battery energy', Unit=self.batEnergyUnit, Type=243, Subtype=29, Switchtype=4, Options={'EnergyMeterMode': '1' }, Used=1, DeviceID=deviceId).Create()
+            # Domoticz.Unit(Name=deviceId + ' - Battery energy', Unit=self.batEnergyUnit, Type=243, Subtype=29, Switchtype=4, Used=1, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Battery energy', Unit=self.batEnergyUnit, Type=243, Subtype=29,  Used=1, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batPowerUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery in/output power', Unit=self.batPowerUnit, Type=250, Subtype=1, Used=1, DeviceID=deviceId).Create()
 
@@ -311,7 +313,7 @@ class SessyBatteryPlugin:
         logging.debug("Updating units for: '" + deviceId +"'")
         perc = round(self.systemPercent / numBatteries, 1)
         UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
-
+        # update P1 meter
         USAGE1 = self.systemEnergyStored
         USAGE2 = 0
         RETURN1 = self.systemEnergyDelivered
@@ -321,8 +323,13 @@ class SessyBatteryPlugin:
         powerString = str(USAGE1) +";"+ str(USAGE2) +";"+ str(RETURN1) +";"+ str(RETURN2) +";"+ str(CONS) + ";"+ str(PROD) #+";"+ datetime.now().strftime(dt_format)
         logging.debug("compiled powerString: "+powerString)
         UpdateDevice(deviceId, self.batPowerUnit, 0, powerString)
+        #update energy device
+        newCounter = calculateNewEnergy(deviceId, self.batEnergyUnit, self.systemPower)
+        powerString = str(self.systemPower)+";" + str(newCounter)
+        UpdateDevice(deviceId, self.batEnergyUnit, 0, powerString)
+        
         self.systemPercent = 0
-        #self.systemPower = 0
+        self.systemPower = 0
         self.systemPowerDelivered = 0
         self.systemPowerStored = 0
         self.systemEnergyDelivered = 0
