@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.12" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.13" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -110,6 +110,8 @@ class SessyBatteryPlugin:
     batEnergyUnit = 22
     # 23: sensor type 'switch', 'Power strategy'
     batStrategyUnit = 23
+    # 24: sensor type '?', 'Power setpoint'
+    batPowerSetpointUnit = 24
 
     runCounter = 6
     p1Counter = P1_FACTOR
@@ -251,7 +253,7 @@ class SessyBatteryPlugin:
                 UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
             if "power" in powerData["sessy"] and "sessy_energy" in energyData:
                 #power going in (negative) or out (positive) of the battery
-                power = round(powerData["sessy"]["power"],1) * -1 #domoticz wants it ithe other way around, apparantly.....
+                power = round(powerData["sessy"]["power"],1) * -1 #domoticz wants it the other way around, apparantly.....
                 consPower = abs(power) if power < 0 else 0 # negative power is going into battery
                 prodPower = abs(power) if power > 0 else 0 # positive power is going out of battery
                 self.systemPower += power
@@ -259,14 +261,10 @@ class SessyBatteryPlugin:
                 USAGE1 = energyData["sessy_energy"]["import_wh"]
                 RETURN2 ="0"
                 USAGE2 ="0"
-                #if power > 0:
                 self.systemPowerDelivered += prodPower
                 self.systemPowerStored += consPower
                 self.systemEnergyDelivered += RETURN1
                 self.systemEnergyStored += USAGE1
-                # else:
-                    # self.systemPowerStored  += power
-                    # self.systemPowerDelivered += 0
                 UpdateDevice(deviceId, self.batEnergyDeliveredUnit, 0, str(prodPower)+";"+str(RETURN1)) 
                 UpdateDevice(deviceId, self.batEnergyStoredUnit, 0, str(consPower)+";"+str(USAGE1)) 
                 powerString = str(USAGE1)+";"+USAGE2+";"+str(RETURN1)+";"+RETURN2+";"+str(consPower)+";"+str(prodPower)
@@ -302,12 +300,11 @@ class SessyBatteryPlugin:
         if deviceId not in Devices or (self.batPercentageUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery percentage', Unit=self.batPercentageUnit, TypeName="General", Subtype=6, Used=1, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batEnergyUnit not in Devices[deviceId].Units):
-            # set switchtype to 4/exporting as positive is going out of battery (so producing)
-            #Domoticz.Unit(Name=deviceId + ' - Battery energy', Unit=self.batEnergyUnit, Type=243, Subtype=29, Switchtype=4, Options={'EnergyMeterMode': '1' }, Used=1, DeviceID=deviceId).Create()
-            # Domoticz.Unit(Name=deviceId + ' - Battery energy', Unit=self.batEnergyUnit, Type=243, Subtype=29, Switchtype=4, Used=1, DeviceID=deviceId).Create()
             Domoticz.Unit(Name=deviceId + ' - Battery energy', Unit=self.batEnergyUnit, Type=243, Subtype=29,  Used=1, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batPowerUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery in/output power', Unit=self.batPowerUnit, Type=250, Subtype=1, Used=1, DeviceID=deviceId).Create()
+        # if deviceId not in Devices or (self.batPowerSetpointUnit not in Devices[deviceId].Units):
+            # Domoticz.Unit(Name=deviceId + ' - Battery power setpoint', Unit=self.batPowerSetpointUnit, Type=250, Subtype=1, Used=1, DeviceID=deviceId).Create()
 
     def updateSystemUnits(self, deviceId, numBatteries):
         logging.debug("Updating units for: '" + deviceId +"'")
@@ -393,6 +390,48 @@ class SessyP1(SessyBase):
     @property
     def tarif(self):
         return self.data["tariff_indicator"]
+
+class PowerStrategy():
+    """enum for power strategy"""
+    
+    NOM = 'POWER_STRATEGY_NOM' # zero on the meter
+    ROI = 'POWER_STRATEGY_ROI' # dynamic
+    API = 'POWER_STRATEGY_API' # open
+    IDLE = 'POWER_STRATEGY_IDLE' # off
+    SESSY = 'POWER_STRATEGY_SESSY_CONNECT' # sessy connect
+    ECO = 'POWER_STRATEGY_ECO' # eco
+    _state = None
+    
+    def __init__(self, state):
+        """go from string to state object"""
+        if state.upper() == 'POWER_STRATEGY_NOM': self._state = self.NOM
+        if state.upper() == 'POWER_STRATEGY_ROI': self._state = self.ROI
+        if state.upper() == 'POWER_STRATEGY_API': self._state = self.API
+        if state.upper() == 'POWER_STRATEGY_IDLE': self._state = self.IDLE
+        if state.upper() == 'POWER_STRATEGY_SESSY_CONNECT': self._state = self.SESSY
+        if state.upper() == 'POWER_STRATEGY_ECO': self._state = self.ECO
+    
+    def __repr__(self):
+        return self._state
+        
+    @property
+    def state(self):
+        if self._state == self.NOM: return 0
+        if self._state == self.ROI: return 1
+        if self._state == self.API: return 2
+        if self._state == self.IDLE: return 3
+        if self._state == self.SESSY: return 4
+        if self._state == self.ECO: return 5
+
+    @property
+    def config_String(self):
+
+        Options = {"LevelActions" : "|||||",
+            "LevelNames" : "NoM|Dynamic|Open|Off|Sessy Connect|Eco",
+            "LevelOffHidden" : "false",
+            "SelectorStyle" : "1"}
+        return Options
+
 
 global _plugin
 _plugin = SessyBatteryPlugin()
