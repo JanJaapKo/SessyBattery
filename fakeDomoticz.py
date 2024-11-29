@@ -7,8 +7,9 @@
 #   It "emulates" Domoticz.Log(), Domoticz.Error and Domoticz.Debug()
 #   It also emulates the Device and Unit from the Ex framework
 #
+from datetime import datetime
 Devices = dict()
-Parameters = {"Mode1": "False", "Mode2": 1, "Mode3" : "0000-0000-0000", "Mode4": "Debug", "Mode5": "", "Mode6": "Debug", "Port": 8443, "Username": "mail@domain.com" , "Password": "aNicerp@ssword", "Version" : "0.0.0", "HomeFolder":"/home/pi/domoticz/plugins/SessyBattery/", "Name": "fakeDomoticz"}
+Parameters = {"Mode1": 200, "Mode2": 6, "Mode3" : 2200, "Mode4": "Debug", "Mode5": "", "Mode6": "Debug", "Port": 8443, "Username": "mail@domain.com" , "Password": "aNicerp@ssword", "Version" : "0.0.0", "HomeFolder":"/home/pi/domoticz/plugins/SessyBattery/", "Name": "fakeDomoticz"}
 config = dict()
 
 class myUnit:
@@ -25,6 +26,10 @@ class myUnit:
     def Create(self):
         print("Creating unit "+str(self.Name)+" for deviceID "+str(self.DeviceID))
 
+    @property
+    def LastUpdate(self):
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
 class Domoticz:
     def __init__(self):
         self.Units = []
