@@ -32,9 +32,38 @@ cd domoticz/plugins/SessyBattery
 git pull https://github.com/JanJaapKo/SessyBattery
 ```
 2. Restart domoticz
-3. Go to "Hardware" page and add new item with type "SessyBattery"
+3. Go to step configuration
 
 
 ## Configuration
 First fill the ```config.json``` file in the plugin directory with the connection details for the batteries and the P1 unit.
-Then create the hardware needed in the Domoticz hardware page. Default configuration works, but can be altered when desired.
+Example:
+```
+{
+	"p1meter": [
+        {
+            "name": "P1 meter",
+            "ip": "192.168.1.1",
+            "user": "ABCDEFGH", # read from sticker
+            "pwd": "ABCDEFGH" # read from sticker
+        }
+    ],
+	"batteries":[
+		{
+			"name": "Sessy L1",
+			"ip": "192.168.86.50",
+			"user": "ABCDEFGH", # read from sticker
+			"pwd": "ABCDEFGH" # read from sticker
+		}, # repeat this block for each sessy
+		{
+			"name": "Sessy L2",
+			"ip": "192.168.86.49",
+			"user": "ABCDEFGH", # read from sticker
+			"pwd": "ABCDEFGH" # read from sticker
+		}
+	]
+}
+```
+4. Go to "Hardware" page and add new item with type "SessyBattery"
+
+The default configuration works, but can be altered when desired.
