@@ -42,22 +42,22 @@ Example:
 {
 	"p1meter": [
         {
-            "name": "P1 meter",
-            "ip": "192.168.1.1",
+            "name": "P1 meter", # give this your own meaningfull name
+            "ip": "192.168.1.1", # read from portal
             "user": "ABCDEFGH", # read from sticker
             "pwd": "ABCDEFGH" # read from sticker
         }
     ],
 	"batteries":[
 		{
-			"name": "Sessy L1",
-			"ip": "192.168.86.50",
+			"name": "Sessy 1",  # give this your own meaningfull name
+			"ip": "192.168.1.2", # read from portal
 			"user": "ABCDEFGH", # read from sticker
 			"pwd": "ABCDEFGH" # read from sticker
 		}, # repeat this block for each sessy
 		{
-			"name": "Sessy L2",
-			"ip": "192.168.86.49",
+			"name": "Sessy 2", # give this your own meaningfull name
+			"ip": "192.168.1.3", # read from portal
 			"user": "ABCDEFGH", # read from sticker
 			"pwd": "ABCDEFGH" # read from sticker
 		}
