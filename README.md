@@ -64,6 +64,7 @@ Example:
 	]
 }
 ```
-4. Go to "Hardware" page and add new item with type "SessyBattery"
+4. Make sure the file contains valid JSON syntax by using online validation tooling or Notepad++'s JSON plugin
+5. Go to "Hardware" page and add new item with type "SessyBattery"
 
 The default configuration works, but can be altered when desired.

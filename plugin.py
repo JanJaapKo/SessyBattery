@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.14" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.15" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -144,7 +144,7 @@ class SessyBatteryPlugin:
             logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
 
         Domoticz.Log("starting plugin version "+Parameters["Version"])
-        #logging.log("starting plugin version "+Parameters["Version"])
+        logging.debug("starting plugin version "+Parameters["Version"])
         Domoticz.Heartbeat(10)
         
         #read config parameters from disk
@@ -152,8 +152,12 @@ class SessyBatteryPlugin:
         config_file = source_path + 'config.json'
         config_map = ""
         with open(config_file) as f:
-            config_map = json.load(f)
-            logging.debug("config map = "+ str(config_map))
+            try:
+                config_map = json.load(f)
+                logging.debug("config map = "+ str(config_map))
+            except json.decoder.JSONDecodeError as theError:
+                Domoticz.Error("JSON error in config file: " + str(theError))
+                return
         
         # create the p1 meter first
         self.createP1Units("Sessy P1")
@@ -184,12 +188,16 @@ class SessyBatteryPlugin:
         #create system units
         self.createSystemUnits("Sessy system")
         self.updateSystemUnits("Sessy system", len(config_map["batteries"]))
+        self.enabled = True # onStart executed succesfull, enable heartbeats
         return
 
     def onHeartbeat(self):
         self.runCounter = self.runCounter - 1
         if self.runCounter <= 0:
             logging.debug("Poll unit")
+            if not self.enabled:
+                Domoticz.Log("Skipping updates since onStart not properly completed")
+                return
             self.runCounter = int(Parameters['Mode2'])
             for battery in self.devices_dict:
                 logging.debug("polling battery: '" +battery+"'")
