@@ -120,7 +120,7 @@ class SessyBatteryPlugin:
     
     def onStart(self):
         self.log_filename = "sessy_"+Parameters["Name"]+".log"
-        Domoticz.Log('Plugin starting')
+        Domoticz.Log('Plugin starting new version')
         #read out parameters for local connection
         self.runCounter = int(Parameters['Mode2'])
         self.log_level = Parameters['Mode4']
@@ -154,10 +154,11 @@ class SessyBatteryPlugin:
         with open(config_file) as f:
             try:
                 config_map = json.load(f)
-                logging.debug("config map = "+ str(config_map))
             except json.decoder.JSONDecodeError as theError:
-                Domoticz.Error("JSON error in config file: " + str(theError))
+                Domoticz.Error("JSON error in config file. Error: '" + str(theError.msg) + "' at position: line " + str(theError.lineno) + " column "+ str(theError.colno))
+                logging.error("JSON error in config file. Error: '" + str(theError.msg) + "' at position: line " + str(theError.lineno) + " column "+ str(theError.colno))
                 return
+        logging.debug("config map = "+ str(config_map))
         
         # create the p1 meter first
         self.createP1Units("Sessy P1")
@@ -165,13 +166,13 @@ class SessyBatteryPlugin:
         p1data = self.p1unit.getDetails()
         logging.debug("P1 meter details: " + str(p1data))
         Domoticz.Log("connected to P1 meter '" + self.p1unit.name + "', status is '"+ p1data["status"] + "'")
-        #logging.log("connected to P1 meter '" + self.p1unit.name + "', status is '"+ p1data["status"] + "'")
+        logging.debug("connected to P1 meter '" + self.p1unit.name + "', status is '"+ p1data["status"] + "'")
         self.updateP1Units("Sessy P1", p1data)
 
         # create battery units
         self.num_batteries = len(config_map["batteries"])
         Domoticz.Log("Found " + str(self.num_batteries) + " batteries")
-        #logging.log("Found " + str(self.num_batteries) + " batteries")
+        logging.debug("Found " + str(self.num_batteries) + " batteries")
         
         self.devices_dict = {}
         devices_names = self.get_device_names(config_map)
