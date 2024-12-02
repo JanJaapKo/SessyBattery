@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.15" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.16" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -117,6 +117,7 @@ class SessyBatteryPlugin:
 
     runCounter = 6
     p1Counter = P1_FACTOR
+    system_name  ="Sessy system"
     
     def onStart(self):
         self.log_filename = "sessy_"+Parameters["Name"]+".log"
@@ -187,8 +188,8 @@ class SessyBatteryPlugin:
             self.updatePowerStrategy(battery["name"], self.devices_dict[battery["name"]].getPowerStrategy())
         
         #create system units
-        self.createSystemUnits("Sessy system")
-        self.updateSystemUnits("Sessy system", len(config_map["batteries"]))
+        self.createSystemUnits(self.system_name)
+        self.updateSystemUnits(self.system_name, len(config_map["batteries"]))
         self.enabled = True # onStart executed succesfull, enable heartbeats
         return
 
@@ -218,7 +219,21 @@ class SessyBatteryPlugin:
         logging.debug("Polling unit in " + str(self.runCounter) + " heartbeats.")
 
     def onCommand(self, DeviceID, Unit, Command, Level, Hue):
-        logging.debug("onCommand called for Device/Unit " + str(DeviceID) + "/" + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
+        logging.debug("onCommand called for Device '" + str(DeviceID) + "', Unit '" + str(Unit) + "': Parameter '" + str(Command) + "', Level: " + str(Level))
+        if Unit == self.batStrategyUnit:
+            strat = PowerStrategy("")
+            strat.state = Level/10
+            if DeviceID == self.system_name: #if it's the system device, send update to all
+                for battery in self.devices_dict:
+                    logging.debug( "commanding battery: '" +battery+"' with strategy '"+str(strat)+"'")
+                    self.devices_dict[battery].setStrategy(str(strat))
+            else:
+                logging.debug( "commanding battery: '" +DeviceID+"' with strategy '"+str(strat)+"'")
+                self.devices_dict[DeviceID].setStrategy(str(strat))
+        if Unit == self.batPowerSetpointUnit:
+            #for battery in self.devices_dict:
+            logging.debug( "commanding battery: '" +DeviceID+"' with setpoint '"+str(Level)+"'")
+            self.devices_dict[DeviceID].setPowerSetpoint(Level)
         
     def onStop(self):
         logging.debug("stopping plugin")
@@ -262,10 +277,9 @@ class SessyBatteryPlugin:
             Domoticz.Unit(Name=deviceId + ' - Battery current L3', DeviceID=deviceId, Unit=(self.batPhase3CurrentUnit), Type=243, Subtype=23).Create()
         if deviceId not in Devices or (self.batStrategyUnit not in Devices[deviceId].Units):
             Options = {"LevelActions" : "|||||",
-                "LevelNames" : "|NoM|Dynamic|Open|Off|Sessy Connect|Eco|Mixed/unknown",
+                "LevelNames" : "|NoM|Dynamic|Open API|Off|Sessy Connect|Eco|Mixed/unknown",
                 "LevelOffHidden" : "true",
                 "SelectorStyle" : "1"}
-            logging.debug("options for switch: "+str(Options))
             Domoticz.Unit(Name=deviceId + ' - Power strategy', DeviceID=deviceId, Unit=self.batStrategyUnit, TypeName="Selector Switch", Options=Options).Create()
         if deviceId not in Devices or (self.batPowerSetpointUnit not in Devices[deviceId].Units):
             Options = {'ValueStep':'10', ' ValueMin':str(self.minPower), 'ValueMax':str(self.maxPower), 'ValueUnit':'W'}
@@ -339,7 +353,7 @@ class SessyBatteryPlugin:
             Domoticz.Unit(Name=deviceId + ' - Battery in/output power', Unit=self.batPowerUnit, Type=250, Subtype=1, Used=1, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batStrategyUnit not in Devices[deviceId].Units):
             Options = {"LevelActions" : "|||||",
-                "LevelNames" : "|NoM|Dynamic|Open|Off|Sessy Connect|Eco|Mixed/unknown",
+                "LevelNames" : "|NoM|Dynamic|Open API|Off|Sessy Connect|Eco|Mixed/unknown",
                 "LevelOffHidden" : "true",
                 "SelectorStyle" : "1"}
             Domoticz.Unit(Name=deviceId + ' - Power strategy', DeviceID=deviceId, Unit=self.batStrategyUnit, TypeName="Selector Switch", Options=Options).Create()
@@ -428,12 +442,19 @@ class SessyBattery(SessyBase):
 
     def getPowerStrategy(self):
         data = self.GetDataFromDevice(self.strategyAPI)
-        logging.debug("[pwer strategy for '" + str(SessyBase.name) + "': '"+str(data))
+        logging.debug("power strategy for '" + str(SessyBase.name) + "': '"+str(data))
         return data
 
     def setPowerSetpoint(self, setpoint):
-        data = self.GetDataFromDevice(self.powerSetpointAPI)
+        body = {"setpoint":setpoint}
+        data = self.PostDataToDevice(self.powerSetpointAPI, body)
         logging.debug("power setpoint for '" + str(SessyBase.name) + "': '"+str(data))
+        return data
+
+    def setStrategy(self, strategy):
+        body = {"strategy":strategy}
+        data = self.PostDataToDevice(self.strategyAPI, body)
+        logging.debug("power strategy for '" + str(SessyBase.name) + "': '"+str(data))
         return data
 
 class SessyP1(SessyBase):
@@ -484,15 +505,14 @@ class PowerStrategy():
         if self._state == self.ECO: return 6
         if self._state == self.MIXED: return 7
 
-    @property
-    def configString(self):
-
-        Options = {"LevelActions" : "|||||",
-            "LevelNames" : "NoM|Dynamic|Open|Off|Sessy Connect|Eco|Mixed/unknown",
-            "LevelOffHidden" : "false",
-            "SelectorStyle" : "1"}
-        return Options
-
+    @state.setter
+    def state(self, stateNum):
+        if stateNum == 1 : self._state = self.NOM
+        if stateNum == 2 : self._state = self.ROI
+        if stateNum == 3 : self._state = self.API
+        if stateNum == 4 : self._state = self.IDLE
+        if stateNum == 5 : self._state = self.SESSY
+        if stateNum == 6 : self._state = self.ECO
 
 global _plugin
 _plugin = SessyBatteryPlugin()
