@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.16" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.17" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -117,7 +117,7 @@ class SessyBatteryPlugin:
 
     runCounter = 6
     p1Counter = P1_FACTOR
-    system_name  ="Sessy system"
+    system_name  = "Sessy system"
     
     def onStart(self):
         self.log_filename = "sessy_"+Parameters["Name"]+".log"
@@ -131,6 +131,7 @@ class SessyBatteryPlugin:
         self.systemPowerStored = 0
         self.systemEnergyDelivered = 0
         self.systemEnergyStored = 0
+        self.powerStrat = 0
         self.minPower = int(Parameters['Mode1'])
         self.maxPower = int(Parameters['Mode3'])
 
@@ -190,6 +191,7 @@ class SessyBatteryPlugin:
         #create system units
         self.createSystemUnits(self.system_name)
         self.updateSystemUnits(self.system_name, len(config_map["batteries"]))
+        self.updatePowerStrategy(self.system_name, "")
         self.enabled = True # onStart executed succesfull, enable heartbeats
         return
 
@@ -208,6 +210,7 @@ class SessyBatteryPlugin:
                 self.updateBatteryUnits(battery, powerData, energyData)
                 self.updatePowerStrategy(battery, self.devices_dict[battery].getPowerStrategy())
             self.updateSystemUnits("Sessy system", len(self.devices_dict))
+            self.updatePowerStrategy(self.system_name, "")
 
             self.p1Counter = self.p1Counter - 1
             if self.p1Counter <= 0:
@@ -234,6 +237,8 @@ class SessyBatteryPlugin:
             #for battery in self.devices_dict:
             logging.debug( "commanding battery: '" +DeviceID+"' with setpoint '"+str(Level)+"'")
             self.devices_dict[DeviceID].setPowerSetpoint(Level)
+        self.runCounter = 0 # force update next heartbeat
+        self.onHeartbeat()
         
     def onStop(self):
         logging.debug("stopping plugin")
@@ -287,8 +292,20 @@ class SessyBatteryPlugin:
             Domoticz.Unit(Name=deviceId + ' - Battery power setpoint', Unit=self.batPowerSetpointUnit, Type=242, Subtype=1, Options=Options, DeviceID=deviceId).Create()
 
     def updatePowerStrategy(self, deviceId, data):
-        powerStrat = PowerStrategy(data["strategy"])
-        UpdateDevice(deviceId, self.batStrategyUnit, powerStrat.state, str(powerStrat.state*10))
+        if deviceId == self.system_name:
+            powerStrat = self.powerStrat // len(self.devices_dict)
+            remainder = self.powerStrat % len(self.devices_dict)
+            # TODO need a proper fix to find if all devices have the same mode
+            logging.debug("input: self.powerStrat = "+str(self.powerStrat) + " num devs: "+str(len(self.devices_dict))+" calculated strategy = "+str(powerStrat) + " and remainder "+str(remainder))
+            if remainder == 0:
+                UpdateDevice(deviceId, self.batStrategyUnit, powerStrat, str(powerStrat*10))
+            else:
+                UpdateDevice(deviceId, self.batStrategyUnit, 70, str(70))
+            self.powerStrat = 0
+        else:
+            powerStrat = PowerStrategy(data["strategy"])
+            self.powerStrat += powerStrat.state
+            UpdateDevice(deviceId, self.batStrategyUnit, powerStrat.state, str(powerStrat.state*10))
         return
 
     def updateBatteryUnits(self, deviceId, powerData, energyData):
@@ -362,6 +379,7 @@ class SessyBatteryPlugin:
 
     def updateSystemUnits(self, deviceId, numBatteries):
         logging.debug("Updating units for: '" + deviceId +"'")
+        # overall SoC %
         perc = round(self.systemPercent / numBatteries, 1)
         UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
         # update P1 meter
@@ -379,6 +397,7 @@ class SessyBatteryPlugin:
         powerString = str(self.systemPower)+";" + str(newCounter)
         UpdateDevice(deviceId, self.batEnergyUnit, 0, powerString)
         
+        # reset variables used to sum up values from individual batteries
         self.systemPercent = 0
         self.systemPower = 0
         self.systemPowerDelivered = 0
@@ -507,6 +526,7 @@ class PowerStrategy():
 
     @state.setter
     def state(self, stateNum):
+        if stateNum == 7 : self._state = self.MIXED
         if stateNum == 1 : self._state = self.NOM
         if stateNum == 2 : self._state = self.ROI
         if stateNum == 3 : self._state = self.API
