@@ -8,6 +8,7 @@ planned developments:
 - implement summary for all batteries (like total power, SoC etc)
 - implement data from p1 meter
 - implement OpenAPI spec to allow controlling the batteries from Domoticz
+- implement auto discovery to get rid of config file
 
 ## Prerequisites
 

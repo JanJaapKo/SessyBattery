@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.17" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.0.18" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -132,6 +132,7 @@ class SessyBatteryPlugin:
         self.systemEnergyDelivered = 0
         self.systemEnergyStored = 0
         self.powerStrat = 0
+        self.powerSetpoint = 0
         self.minPower = int(Parameters['Mode1'])
         self.maxPower = int(Parameters['Mode3'])
 
@@ -234,9 +235,13 @@ class SessyBatteryPlugin:
                 logging.debug( "commanding battery: '" +DeviceID+"' with strategy '"+str(strat)+"'")
                 self.devices_dict[DeviceID].setStrategy(str(strat))
         if Unit == self.batPowerSetpointUnit:
-            #for battery in self.devices_dict:
-            logging.debug( "commanding battery: '" +DeviceID+"' with setpoint '"+str(Level)+"'")
-            self.devices_dict[DeviceID].setPowerSetpoint(Level)
+            if DeviceID == self.system_name: #if it's the system device, send update to all
+                for battery in self.devices_dict:
+                    logging.debug( "commanding battery: '" +DeviceID+"' with setpoint '"+str(Level)+"'")
+                    self.devices_dict[DeviceID].setPowerSetpoint(Level)
+            else:
+                logging.debug( "commanding battery: '" +DeviceID+"' with setpoint '"+str(Level)+"'")
+                self.devices_dict[DeviceID].setPowerSetpoint(Level)
         self.runCounter = 0 # force update next heartbeat
         self.onHeartbeat()
         
@@ -287,8 +292,8 @@ class SessyBatteryPlugin:
                 "SelectorStyle" : "1"}
             Domoticz.Unit(Name=deviceId + ' - Power strategy', DeviceID=deviceId, Unit=self.batStrategyUnit, TypeName="Selector Switch", Options=Options).Create()
         if deviceId not in Devices or (self.batPowerSetpointUnit not in Devices[deviceId].Units):
-            Options = {'ValueStep':'10', ' ValueMin':str(self.minPower), 'ValueMax':str(self.maxPower), 'ValueUnit':'W'}
-            Options = {'ValueStep':'10', ' ValueMin':'100', 'ValueMax':'2200', 'ValueUnit':'W'}
+            Options = {'ValueStep':'100', ' ValueMin':str(self.minPower), 'ValueMax':str(self.maxPower), 'ValueUnit':'W'}
+            Options = {'ValueStep':'100', ' ValueMin':'-2200', 'ValueMax':'2200', 'ValueUnit':'W'}
             Domoticz.Unit(Name=deviceId + ' - Battery power setpoint', Unit=self.batPowerSetpointUnit, Type=242, Subtype=1, Options=Options, DeviceID=deviceId).Create()
 
     def updatePowerStrategy(self, deviceId, data):
@@ -335,6 +340,10 @@ class SessyBatteryPlugin:
                 powerString = str(USAGE1)+";"+USAGE2+";"+str(RETURN1)+";"+RETURN2+";"+str(consPower)+";"+str(prodPower)
                 logging.debug("Powerstring = " + powerString)
                 UpdateDevice(deviceId, self.batPowerUnit, 0, powerString)
+            if "power_setpoint" in powerData["sessy"]:
+                powerSetpoint = powerData["sessy"]["power_setpoint"]
+                self.powerSetpoint += powerSetpoint
+                UpdateDevice(deviceId, self.batPowerSetpointUnit, powerSetpoint, str(powerSetpoint))
             if "system_state" in powerData["sessy"]:
                 UpdateDevice(deviceId, self.batBatteryGeneralStateUnit, 1, str(powerData["sessy"]["system_state"]))
             if "system_state_details" in powerData["sessy"]:
@@ -375,7 +384,9 @@ class SessyBatteryPlugin:
                 "SelectorStyle" : "1"}
             Domoticz.Unit(Name=deviceId + ' - Power strategy', DeviceID=deviceId, Unit=self.batStrategyUnit, TypeName="Selector Switch", Options=Options).Create()
         if deviceId not in Devices or (self.batPowerSetpointUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Battery power setpoint', Unit=self.batPowerSetpointUnit, Type=242, Subtype=1, DeviceID=deviceId).Create()
+            Options = {'ValueStep':'100', ' ValueMin':str(self.minPower), 'ValueMax':str(self.maxPower), 'ValueUnit':'W'}
+            Options = {'ValueStep':'100', ' ValueMin':'-2200', 'ValueMax':'2200', 'ValueUnit':'W'}
+            Domoticz.Unit(Name=deviceId + ' - Battery power setpoint', Unit=self.batPowerSetpointUnit, Type=242, Subtype=1, Options=Options, DeviceID=deviceId).Create()
 
     def updateSystemUnits(self, deviceId, numBatteries):
         logging.debug("Updating units for: '" + deviceId +"'")
@@ -397,6 +408,8 @@ class SessyBatteryPlugin:
         powerString = str(self.systemPower)+";" + str(newCounter)
         UpdateDevice(deviceId, self.batEnergyUnit, 0, powerString)
         
+        UpdateDevice(deviceId, self.batPowerSetpointUnit, self.powerSetpoint, str(self.powerSetpoint))
+        
         # reset variables used to sum up values from individual batteries
         self.systemPercent = 0
         self.systemPower = 0
@@ -404,6 +417,7 @@ class SessyBatteryPlugin:
         self.systemPowerStored = 0
         self.systemEnergyDelivered = 0
         self.systemEnergyStored = 0
+        self.powerSetpoint = 0
         
 
     def createP1Units(self, deviceId):
@@ -440,8 +454,7 @@ class SessyBase():
     def PostDataToDevice(self, api, json):
        logging.debug("post data to: " + self.base_url + api)
        response = requests.post(self.base_url + api, json = json)
-       #jsonData = json.loads(response.text)
-       return response.json()
+       return response
 
 class SessyBattery(SessyBase):
     powerAPI = '/api/v1/power/status'
@@ -468,6 +481,8 @@ class SessyBattery(SessyBase):
         body = {"setpoint":setpoint}
         data = self.PostDataToDevice(self.powerSetpointAPI, body)
         logging.debug("power setpoint for '" + str(SessyBase.name) + "': '"+str(data))
+        if data.status_code != 200:
+            raise RequestError(data.status_code, data.json()['error'])
         return data
 
     def setStrategy(self, strategy):
@@ -533,6 +548,13 @@ class PowerStrategy():
         if stateNum == 4 : self._state = self.IDLE
         if stateNum == 5 : self._state = self.SESSY
         if stateNum == 6 : self._state = self.ECO
+
+
+class RequestError(Exception):
+    """Custom error to handle return errors from API calls"""
+    def __init__(self, code, error_message):
+        self.message = "Failed call to Sessy API (status code = {}, error message: '{}')".format(code, error_message)
+        super().__init__(self.message)
 
 global _plugin
 _plugin = SessyBatteryPlugin()
