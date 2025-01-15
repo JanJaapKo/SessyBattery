@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.0" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.1" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -295,8 +295,8 @@ class SessyBatteryPlugin:
                 "SelectorStyle" : "1"}
             Domoticz.Unit(Name=deviceId + ' - Power strategy', DeviceID=deviceId, Unit=self.batStrategyUnit, TypeName="Selector Switch", Options=Options).Create()
         if deviceId not in Devices or (self.batPowerSetpointUnit not in Devices[deviceId].Units):
-            Options = {'ValueStep':'100', ' ValueMin':str(self.minPower), 'ValueMax':str(self.maxPower), 'ValueUnit':'W'}
-            Options = {'ValueStep':'100', ' ValueMin':'-2200', 'ValueMax':'2200', 'ValueUnit':'W'}
+            Options = {'ValueStep':'100', 'ValueMin':str(self.minPower), 'ValueMax':str(self.maxPower), 'ValueUnit':'W'}
+            Options = {'ValueStep':'100', 'ValueMin':'-2200', 'ValueMax':'2200', 'ValueUnit':'W'}
             Domoticz.Unit(Name=deviceId + ' - Battery power setpoint', Unit=self.batPowerSetpointUnit, Type=242, Subtype=1, Options=Options, DeviceID=deviceId).Create()
 
     def updatePowerStrategy(self, deviceId, data):
@@ -387,8 +387,8 @@ class SessyBatteryPlugin:
                 "SelectorStyle" : "1"}
             Domoticz.Unit(Name=deviceId + ' - Power strategy', DeviceID=deviceId, Unit=self.batStrategyUnit, TypeName="Selector Switch", Options=Options).Create()
         if deviceId not in Devices or (self.batPowerSetpointUnit not in Devices[deviceId].Units):
-            Options = {'ValueStep':'100', ' ValueMin':str(-1 * self.maxPower * len(self.devices_dict)), 'ValueMax':str(self.maxPower * len(self.devices_dict)), 'ValueUnit':'W'}
-            #Options = {'ValueStep':'100', ' ValueMin':'-2200', 'ValueMax':'4400', 'ValueUnit':'W'}
+            Options = {'ValueStep':'100', 'ValueMin':str(-1 * self.maxPower * len(self.devices_dict)), 'ValueMax':str(self.maxPower * len(self.devices_dict)), 'ValueUnit':'W'}
+            #Options = {'ValueStep':'100', 'ValueMin':'-2200', 'ValueMax':'4400', 'ValueUnit':'W'}
             logging.debug("options to create power setpoint: "+ str(Options))
             Domoticz.Unit(Name=deviceId + ' - Battery power setpoint', Unit=self.batPowerSetpointUnit, Type=242, Subtype=1, Options=Options, DeviceID=deviceId).Create()
 
