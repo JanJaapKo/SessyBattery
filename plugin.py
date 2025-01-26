@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.1" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.3" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -116,6 +116,8 @@ class SessyBatteryPlugin:
     batStrategyUnit = 23
     # 24: sensor type '?', 'Power setpoint'
     batPowerSetpointUnit = 24
+    # 24: sensor type '?', 'Error/warning'
+    batErrorWarning = 25
 
     runCounter = 6
     p1Counter = P1_FACTOR
@@ -150,7 +152,7 @@ class SessyBatteryPlugin:
 
         Domoticz.Log("starting plugin version "+Parameters["Version"])
         logging.debug("starting plugin version "+Parameters["Version"])
-        Domoticz.Heartbeat(10)
+        #Domoticz.Heartbeat(10)
         
         #read config parameters from disk
         source_path = Parameters['HomeFolder']
@@ -212,6 +214,9 @@ class SessyBatteryPlugin:
                 energyData = self.devices_dict[battery].getEnergyStatus()
                 self.updateBatteryUnits(battery, powerData, energyData)
                 self.updatePowerStrategy(battery, self.devices_dict[battery].getPowerStrategy())
+                if datetime.now().minute == 1:
+                    # check if there is data
+                    self.devices_dict[battery].getDynamicSchedule()
             self.updateSystemUnits("Sessy system", len(self.devices_dict))
             self.updatePowerStrategy(self.system_name, "")
 
@@ -245,7 +250,7 @@ class SessyBatteryPlugin:
             else:
                 logging.debug( "commanding battery: '" +DeviceID+"' with setpoint '"+str(Level)+"'")
                 self.devices_dict[DeviceID].setPowerSetpoint(Level)
-        self.runCounter = 0 # force update next heartbeat
+        self.runCounter = 1 # force update second next heartbeat to allow a bit of time to react
         self.onHeartbeat()
         
     def onStop(self):
@@ -298,6 +303,8 @@ class SessyBatteryPlugin:
             Options = {'ValueStep':'100', 'ValueMin':str(self.minPower), 'ValueMax':str(self.maxPower), 'ValueUnit':'W'}
             Options = {'ValueStep':'100', 'ValueMin':'-2200', 'ValueMax':'2200', 'ValueUnit':'W'}
             Domoticz.Unit(Name=deviceId + ' - Battery power setpoint', Unit=self.batPowerSetpointUnit, Type=242, Subtype=1, Options=Options, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.batErrorWarning not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery error/warning', Unit=self.batErrorWarning, TypeName="Text", Image=7, DeviceID=deviceId).Create()
 
     def updatePowerStrategy(self, deviceId, data):
         if deviceId == self.system_name:
@@ -341,7 +348,7 @@ class SessyBatteryPlugin:
                 UpdateDevice(deviceId, self.batEnergyDeliveredUnit, 0, str(prodPower)+";"+str(RETURN1)) 
                 UpdateDevice(deviceId, self.batEnergyStoredUnit, 0, str(consPower)+";"+str(USAGE1)) 
                 powerString = str(USAGE1)+";"+USAGE2+";"+str(RETURN1)+";"+RETURN2+";"+str(consPower)+";"+str(prodPower)
-                logging.debug("Powerstring = " + powerString)
+                #logging.debug("Powerstring = " + powerString)
                 UpdateDevice(deviceId, self.batPowerUnit, 0, powerString)
             if "power_setpoint" in powerData["sessy"]:
                 powerSetpoint = powerData["sessy"]["power_setpoint"]
@@ -405,7 +412,7 @@ class SessyBatteryPlugin:
         CONS = self.systemPowerStored
         PROD = self.systemPowerDelivered
         powerString = str(USAGE1) +";"+ str(USAGE2) +";"+ str(RETURN1) +";"+ str(RETURN2) +";"+ str(CONS) + ";"+ str(PROD) #+";"+ datetime.now().strftime(dt_format)
-        logging.debug("compiled powerString: "+powerString)
+        #logging.debug("compiled powerString: "+powerString)
         UpdateDevice(deviceId, self.batPowerUnit, 0, powerString)
         #update energy device
         newCounter = calculateNewEnergy(deviceId, self.batEnergyUnit, self.systemPower)
@@ -452,7 +459,6 @@ class SessyBase():
     def GetDataFromDevice(self, api):
        logging.debug("get data from: " + self.base_url + api)
        response = requests.get(self.base_url + api)
-       #jsonData = json.loads(response.text)
        return response.json()
 
     def PostDataToDevice(self, api, json):
@@ -461,14 +467,21 @@ class SessyBase():
        return response
 
 class SessyBattery(SessyBase):
-    powerAPI = '/api/v1/power/status'
+    dynamicScheduleAPI = '/api/v1/dynamic/schedule'
+    #dynamicScheduleAPI = '/api/v1/energy/status'
     energyAPI = '/api/v1/energy/status'
+    powerAPI = '/api/v1/power/status'
     strategyAPI = '/api/v1/power/active_strategy'
     powerSetpointAPI = '/api/v1/power/setpoint'
 
-    def getPowerStatus(self):
-        data = self.GetDataFromDevice(self.powerAPI)
-        logging.debug("power status for '" + str(SessyBase.name) + "': '"+str(data))
+    def getDynamicSchedule(self):
+        dt_format = "%Y-%m-%d"
+        data = self.GetDataFromDevice(self.dynamicScheduleAPI)
+        logging.debug("dynamic scheule for '" + str(SessyBase.name) + "': '"+str(data))
+        if "power_strategy" not in data or len(data["power_strategy"]) < 1:
+            raise ScheduleError("power strategy", datetime.now().strftime(dt_format))
+        if "energy_prices" not in data or len(data["energy_prices"]) < 1:
+            raise ScheduleError("energy prices", datetime.now().strftime(dt_format))
         return data
 
     def getEnergyStatus(self):
@@ -476,9 +489,9 @@ class SessyBattery(SessyBase):
         logging.debug("energy status for '" + str(SessyBase.name) + "': '"+str(data))
         return data
 
-    def getPowerStrategy(self):
-        data = self.GetDataFromDevice(self.strategyAPI)
-        logging.debug("power strategy for '" + str(SessyBase.name) + "': '"+str(data))
+    def getPowerStatus(self):
+        data = self.GetDataFromDevice(self.powerAPI)
+        logging.debug("power status for '" + str(SessyBase.name) + "': '"+str(data))
         return data
 
     def setPowerSetpoint(self, setpoint):
@@ -487,6 +500,11 @@ class SessyBattery(SessyBase):
         logging.debug("power setpoint for '" + str(SessyBase.name) + "': '"+str(data))
         if data.status_code != 200:
             raise RequestError(data.status_code, data.json()['error'])
+        return data
+
+    def getPowerStrategy(self):
+        data = self.GetDataFromDevice(self.strategyAPI)
+        logging.debug("power strategy for '" + str(SessyBase.name) + "': '"+str(data))
         return data
 
     def setStrategy(self, strategy):
@@ -558,6 +576,13 @@ class RequestError(Exception):
     """Custom error to handle return errors from API calls"""
     def __init__(self, code, error_message):
         self.message = "Failed call to Sessy API (status code = {}, error message: '{}')".format(code, error_message)
+        super().__init__(self.message)
+
+
+class ScheduleError(Exception):
+    """Custom error to handle return errors from API calls"""
+    def __init__(self, data_element, date_string):
+        self.message = "Missing schedule information '{}' for {}".format(data_element, date_string)
         super().__init__(self.message)
 
 global _plugin
@@ -690,11 +715,11 @@ def calculateNewEnergy(Device, Unit, inputPower):
     else:
         lastUpdateDT = datetime.now()
     elapsedTime = datetime.now() - lastUpdateDT
-    logging.debug("Test power, previousPower: {}, last update: {:%Y-%m-%d %H:%M}, elapsedTime: {}, elapsedSeconds: {:6.2f}".format(previousPower, lastUpdateDT, elapsedTime, elapsedTime.total_seconds()))
+    #logging.debug("Test power, previousPower: {}, last update: {:%Y-%m-%d %H:%M}, elapsedTime: {}, elapsedSeconds: {:6.2f}".format(previousPower, lastUpdateDT, elapsedTime, elapsedTime.total_seconds()))
     
     #average current and previous power (Watt) and multiply by elapsed time (hour) to get Watt hour
     previousPower = str(previousPower).replace("w","").replace("W","")
     newCount = round(((float(previousPower) + inputPower ) / 2) * elapsedTime.total_seconds()/3600,2)
     newCounter = newCount + float(currentCount) #add the amount of energy since last update to the already logged energy
-    logging.debug("Test power, previousPower: {}, currentCount: {:6.2f}, newCounter: {:6.2f}, added: {:6.2f}".format(previousPower, float(currentCount), newCounter, newCount))
+    #logging.debug("Test power, previousPower: {}, currentCount: {:6.2f}, newCounter: {:6.2f}, added: {:6.2f}".format(previousPower, float(currentCount), newCounter, newCount))
     return newCounter
