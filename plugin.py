@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.3" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.4" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -118,6 +118,8 @@ class SessyBatteryPlugin:
     batPowerSetpointUnit = 24
     # 24: sensor type '?', 'Error/warning'
     batErrorWarning = 25
+    # 24: sensor type 'switch', 
+    batStrategyOverridden = 26
 
     runCounter = 6
     p1Counter = P1_FACTOR
@@ -305,6 +307,8 @@ class SessyBatteryPlugin:
             Domoticz.Unit(Name=deviceId + ' - Battery power setpoint', Unit=self.batPowerSetpointUnit, Type=242, Subtype=1, Options=Options, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.batErrorWarning not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Battery error/warning', Unit=self.batErrorWarning, TypeName="Text", Image=7, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.batStrategyOverridden not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Battery strategy overridden', Unit=self.batStrategyOverridden, TypeName="Switch", DeviceID=deviceId).Create()
 
     def updatePowerStrategy(self, deviceId, data):
         if deviceId == self.system_name:
@@ -360,6 +364,9 @@ class SessyBatteryPlugin:
                 UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, str(powerData["sessy"]["system_state_details"]))
             else:
                 UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, "all ok")
+            if "strategy_overridden" in powerData["sessy"]:
+                state = SwitchMode(str(powerData["sessy"]["strategy_overridden"]))
+                UpdateDevice(deviceId, self.batStrategyOverridden, state.state, str(state))
         if "renewable_energy_phase1" in powerData:
             if "voltage_rms" in powerData["renewable_energy_phase1"]:
                 UpdateDevice(deviceId, self.batPhase1VoltageUnit, 0, str(round(powerData["renewable_energy_phase1"]["voltage_rms"]/1000,0)))
@@ -571,6 +578,24 @@ class PowerStrategy():
         if stateNum == 5 : self._state = self.SESSY
         if stateNum == 6 : self._state = self.ECO
 
+class SwitchMode():
+    """Enum for switches"""
+    OFF = 'Off'
+    ON = 'On'
+    _state = None
+    
+    def __init__(self, state):
+        """go from string to state object"""
+        if state.upper() == 'FALSE': self._state = self.OFF
+        if state.upper() == 'TRU': self._state = self.ON
+    
+    def __repr__(self):
+        return self._state
+        
+    @property
+    def state(self):
+        if self._state == self.OFF: return 0
+        if self._state == self.ON: return 1
 
 class RequestError(Exception):
     """Custom error to handle return errors from API calls"""
