@@ -59,6 +59,7 @@ import json
 import time
 import requests
 from datetime import datetime, timedelta
+import exceptions
 
 P1_FACTOR = 10 # number of battery polls before polling P1
 dt_format = "%Y-%m-%d %H:%M:%S"
@@ -212,13 +213,21 @@ class SessyBatteryPlugin:
             self.runCounter = int(Parameters['Mode2'])
             for battery in self.devices_dict:
                 logging.debug("polling battery: '" +battery+"'")
-                try:
-                    powerData = self.devices_dict[battery].getPowerStatus()
-                    energyData = self.devices_dict[battery].getEnergyStatus()
-                except RequestError as e:
-                    Domoticz.Error(f"an error occured while reading data from {battery}: {e}")
-                    logging.error(f"an error occured while reading data from {battery}: {e}")
-                    return
+                for i in range(1, 4):
+                    try:
+                        powerData = self.devices_dict[battery].getPowerStatus()
+                        energyData = self.devices_dict[battery].getEnergyStatus()
+                    except exceptions.RequestError as e:
+                        Domoticz.Error(f"an error occured while reading data from {battery}: {e}")
+                        logging.error(f"an error occured while reading data from {battery}: {e}")
+                        #return
+                    except requests.exceptions.RequestException as exp:
+                        logging.error("RequestException: " + str(exp))
+                        Domoticz.Error("RequestException: " + str(exp))
+                        #return
+                    time.sleep(i ** 3)
+                else:
+                    raise exceptions.TooManyRetries
                 self.updateBatteryUnits(battery, powerData, energyData)
                 self.updatePowerStrategy(battery, self.devices_dict[battery].getPowerStrategy())
                 if datetime.now().minute == 1:
@@ -472,10 +481,10 @@ class SessyBase():
 
     def GetDataFromDevice(self, api):
         logging.debug("get data from: " + self.base_url + api)
-        response = requests.get(self.base_url + api)
+        response = requests.get(self.base_url + api, timeout=6)
         if response.status_code != 200:
             logging.error("error during GET: status code"+str(response.status_code)+", status: "+response.json()['status']+", error: "+response.json()['error'])
-            raise RequestError(response.status_code, response.json()['error'])
+            raise exceptions.RequestError(response.status_code, response.json()['error'])
         return response.json()
 
     def PostDataToDevice(self, api, json):
@@ -496,9 +505,9 @@ class SessyBattery(SessyBase):
         data = self.GetDataFromDevice(self.dynamicScheduleAPI)
         logging.debug("dynamic scheule for '" + str(SessyBase.name) + "': '"+str(data))
         if "power_strategy" not in data or len(data["power_strategy"]) < 1:
-            raise ScheduleError("power strategy", datetime.now().strftime(dt_format))
+            raise exceptions.ScheduleError("power strategy", datetime.now().strftime(dt_format))
         if "energy_prices" not in data or len(data["energy_prices"]) < 1:
-            raise ScheduleError("energy prices", datetime.now().strftime(dt_format))
+            raise exceptions.ScheduleError("energy prices", datetime.now().strftime(dt_format))
         return data
 
     def getEnergyStatus(self):
@@ -516,7 +525,7 @@ class SessyBattery(SessyBase):
         data = self.PostDataToDevice(self.powerSetpointAPI, body)
         logging.debug("power setpoint for '" + str(SessyBase.name) + "': '"+str(data))
         if data.status_code != 200:
-            raise RequestError(data.status_code, data.json()['error'])
+            raise exceptions.RequestError(data.status_code, data.json()['error'])
         return data
 
     def getPowerStrategy(self):
@@ -606,19 +615,6 @@ class SwitchMode():
     def state(self):
         if self._state == self.OFF: return 0
         if self._state == self.ON: return 1
-
-class RequestError(Exception):
-    """Custom error to handle return errors from API calls"""
-    def __init__(self, code, error_message):
-        self.message = "Failed call to Sessy API (status code = {}, error message: '{}')".format(code, error_message)
-        super().__init__(self.message)
-
-
-class ScheduleError(Exception):
-    """Custom error to handle return errors from API calls"""
-    def __init__(self, data_element, date_string):
-        self.message = "Missing schedule information '{}' for {}".format(data_element, date_string)
-        super().__init__(self.message)
 
 global _plugin
 _plugin = SessyBatteryPlugin()
