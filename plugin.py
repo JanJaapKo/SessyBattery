@@ -216,7 +216,24 @@ class SessyBatteryPlugin:
                 for i in range(1, 4):
                     try:
                         powerData = self.devices_dict[battery].getPowerStatus()
+                        if powerData['status'] == 'ok':
+                            break
+                    except exceptions.RequestError as e:
+                        Domoticz.Error(f"an error occured while reading data from {battery}: {e}")
+                        logging.error(f"an error occured while reading data from {battery}: {e}")
+                        #return
+                    except requests.exceptions.RequestException as exp:
+                        logging.error("RequestException: " + str(exp))
+                        Domoticz.Error("RequestException: " + str(exp))
+                        #return
+                    time.sleep(i ** 3)
+                else:
+                    raise exceptions.TooManyRetries
+                for i in range(1, 4):
+                    try:
                         energyData = self.devices_dict[battery].getEnergyStatus()
+                        if energyData['status'] == 'ok':
+                            break
                     except exceptions.RequestError as e:
                         Domoticz.Error(f"an error occured while reading data from {battery}: {e}")
                         logging.error(f"an error occured while reading data from {battery}: {e}")
