@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.4" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.5" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -212,8 +212,13 @@ class SessyBatteryPlugin:
             self.runCounter = int(Parameters['Mode2'])
             for battery in self.devices_dict:
                 logging.debug("polling battery: '" +battery+"'")
-                powerData = self.devices_dict[battery].getPowerStatus()
-                energyData = self.devices_dict[battery].getEnergyStatus()
+                try:
+                    powerData = self.devices_dict[battery].getPowerStatus()
+                    energyData = self.devices_dict[battery].getEnergyStatus()
+                except RequestError as e:
+                    Domoticz.Error(f"an error occured while reading data from {battery}: {e}")
+                    logging.error(f"an error occured while reading data from {battery}: {e}")
+                    return
                 self.updateBatteryUnits(battery, powerData, energyData)
                 self.updatePowerStrategy(battery, self.devices_dict[battery].getPowerStrategy())
                 if datetime.now().minute == 1:
@@ -334,6 +339,7 @@ class SessyBatteryPlugin:
                 #battery state of charge. Percentage with high number of decimals, needs to be trimmed
                 perc = round(powerData["sessy"]["state_of_charge"]*100,1)
                 self.systemPercent += perc
+                logging.debug(f"self.systemPercent = {self.systemPercent}, perc = {perc}" )
                 UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
             if "power" in powerData["sessy"] and "sessy_energy" in energyData:
                 #power going in (negative) or out (positive) of the battery
@@ -410,6 +416,7 @@ class SessyBatteryPlugin:
         logging.debug("Updating units for: '" + deviceId +"'")
         # overall SoC %
         perc = round(self.systemPercent / numBatteries, 1)
+        logging.debug(f"perc: = {perc}, self.systemPercent={self.systemPercent}, numBatteries={numBatteries}")
         UpdateDevice(deviceId, self.batPercentageUnit, perc, str(perc))
         # update P1 meter
         USAGE1 = self.systemEnergyStored
@@ -464,14 +471,17 @@ class SessyBase():
         return self.__name
 
     def GetDataFromDevice(self, api):
-       logging.debug("get data from: " + self.base_url + api)
-       response = requests.get(self.base_url + api)
-       return response.json()
+        logging.debug("get data from: " + self.base_url + api)
+        response = requests.get(self.base_url + api)
+        if response.status_code != 200:
+            logging.error("error during GET: status code"+str(response.status_code)+", status: "+response.json()['status']+", error: "+response.json()['error'])
+            raise RequestError(response.status_code, response.json()['error'])
+        return response.json()
 
     def PostDataToDevice(self, api, json):
-       logging.debug("post data to: " + self.base_url + api)
-       response = requests.post(self.base_url + api, json = json)
-       return response
+        logging.debug("post data to: " + self.base_url + api)
+        response = requests.post(self.base_url + api, json = json)
+        return response
 
 class SessyBattery(SessyBase):
     dynamicScheduleAPI = '/api/v1/dynamic/schedule'
