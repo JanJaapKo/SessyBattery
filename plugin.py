@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.5" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.6" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -143,18 +143,21 @@ class SessyBatteryPlugin:
         self.minPower = int(Parameters['Mode1'])
         self.maxPower = int(Parameters['Mode3'])
 
+        logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.INFO)
         if self.log_level == 'Debug':
-            logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
+            #logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
+            logging.basicConfig(level=logging.DEBUG)
             Domoticz.Log("Starting Sessy Battery plugin, logging to file {0}".format(self.log_filename))
             Domoticz.Debugging(2)
             DumpConfigToLog()
         if self.log_level == 'Verbose':
             Domoticz.Debugging(1+2+4+8+16+64)
             DumpConfigToLog()
-            logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
+            #logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
+            logging.basicConfig(level=logging.DEBUG)
 
         Domoticz.Log("starting plugin version "+Parameters["Version"])
-        logging.debug("starting plugin version "+Parameters["Version"])
+        logging.info("starting plugin version "+Parameters["Version"])
         #Domoticz.Heartbeat(10)
         
         #read config parameters from disk
@@ -287,7 +290,7 @@ class SessyBatteryPlugin:
         self.onHeartbeat()
         
     def onStop(self):
-        logging.debug("stopping plugin")
+        logging.info("stopping plugin")
 
     def get_device_names(self, configmap):
         """find the amount of stored devices"""
