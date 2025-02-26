@@ -399,9 +399,9 @@ class SessyBatteryPlugin:
                 UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, str(powerData["sessy"]["system_state_details"]))
             else:
                 UpdateDevice(deviceId, self.batBatteryDetailedStateUnit, 1, "all ok")
-            if "strategy_overridden" in powerData["sessy"]:
-                state = SwitchMode(str(powerData["sessy"]["strategy_overridden"]))
-                UpdateDevice(deviceId, self.batStrategyOverridden, state.state, str(state))
+            # if "strategy_overridden" in powerData["sessy"]:
+                # state = SwitchMode(str(powerData["sessy"]["strategy_overridden"]))
+                # UpdateDevice(deviceId, self.batStrategyOverridden, state.state, str(state))
         if "renewable_energy_phase1" in powerData:
             if "voltage_rms" in powerData["renewable_energy_phase1"]:
                 UpdateDevice(deviceId, self.batPhase1VoltageUnit, 0, str(round(powerData["renewable_energy_phase1"]["voltage_rms"]/1000,0)))
