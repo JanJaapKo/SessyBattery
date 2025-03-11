@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.6" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.7" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -626,7 +626,7 @@ class SwitchMode():
     def __init__(self, state):
         """go from string to state object"""
         if state.upper() == 'FALSE': self._state = self.OFF
-        if state.upper() == 'TRU': self._state = self.ON
+        if state.upper() == 'TRUE': self._state = self.ON
     
     def __repr__(self):
         return self._state
