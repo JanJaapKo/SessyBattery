@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.7" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.8" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -282,10 +282,18 @@ class SessyBatteryPlugin:
                 setpoint = Level/len(self.devices_dict) #average out the total setpoint over individul batteries
                 for battery in self.devices_dict:
                     logging.debug( "commanding battery: '" +battery+"' with setpoint '"+str(Level)+"'")
-                    self.devices_dict[battery].setPowerSetpoint(setpoint)
+                    try:
+                        self.devices_dict[battery].setPowerSetpoint(setpoint)
+                    except exceptions.RequestError as e:
+                        logging.error(f"an error occured while commanding {battery}: {e}")
+                        Domoticz.Error(f"an error occured while commanding {battery}: {e}")
             else:
                 logging.debug( "commanding battery: '" +DeviceID+"' with setpoint '"+str(Level)+"'")
-                self.devices_dict[DeviceID].setPowerSetpoint(Level)
+                try:
+                    self.devices_dict[DeviceID].setPowerSetpoint(Level)
+                except exceptions.RequestError as e:
+                    logging.error(f"an error occured while commanding {DeviceID}: {e}")
+                    Domoticz.Error(f"an error occured while commanding {DeviceID}: {e}")
         self.runCounter = 1 # force update second next heartbeat to allow a bit of time to react
         self.onHeartbeat()
         
