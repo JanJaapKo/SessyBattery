@@ -189,15 +189,30 @@ class SessyBatteryPlugin:
         
         self.devices_dict = {}
         devices_names = self.get_device_names(config_map)
+        found_devices = []
         for battery in config_map["batteries"]:
-            self.devices_dict[battery["name"]] = SessyBattery(battery)
-            self.createBatteryUnits(battery["name"])
-            data = self.devices_dict[battery["name"]].getPowerStatus()
-            logging.debug("initial data query power status '" + battery["name"] + "': " + str(data))
-            energy = self.devices_dict[battery["name"]].getEnergyStatus()
-            self.updateBatteryUnits(battery["name"], data, energy)
-            logging.debug("initial data query energy status '" + battery["name"] + "': " + str(energy))
-            self.updatePowerStrategy(battery["name"], self.devices_dict[battery["name"]].getPowerStrategy())
+            try:
+                # Try to create and contact the device
+                device = SessyBattery(battery)
+                # Try a simple status call to check if reachable
+                device.getPowerStatus()
+                self.devices_dict[battery["name"]] = device
+                found_devices.append(battery["name"])
+                self.createBatteryUnits(battery["name"])
+                data = self.devices_dict[battery["name"]].getPowerStatus()
+                logging.debug("initial data query power status '" + battery["name"] + "': " + str(data))
+                energy = self.devices_dict[battery["name"]].getEnergyStatus()
+                self.updateBatteryUnits(battery["name"], data, energy)
+                logging.debug("initial data query energy status '" + battery["name"] + "': " + str(energy))
+                self.updatePowerStrategy(battery["name"], self.devices_dict[battery["name"]].getPowerStrategy())
+            except Exception as e:
+                logging.warning(f"Device '{battery['name']}' not found or unreachable: {e}")
+                Domoticz.Log(f"Device '{battery['name']}' not found or unreachable: {e}")
+
+        expected = len(config_map["batteries"])
+        found = len(found_devices)
+        logging.info(f"Found {found} out of {expected} batteries: {found_devices}")
+        Domoticz.Log(f"Found {found} out of {expected} batteries: {found_devices}")
         
         #create system units
         self.createSystemUnits(self.system_name)
