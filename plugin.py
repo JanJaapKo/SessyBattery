@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.8" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.9" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -143,20 +143,19 @@ class SessyBatteryPlugin:
         self.minPower = int(Parameters['Mode1'])
         self.maxPower = int(Parameters['Mode3'])
 
-        logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.INFO)
+        #logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.INFO)
         if self.log_level == 'Debug':
-            #logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
-            logging.basicConfig(level=logging.DEBUG)
-            Domoticz.Log("Starting Sessy Battery plugin, logging to file {0}".format(self.log_filename))
+            logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
             Domoticz.Debugging(2)
             DumpConfigToLog()
-        if self.log_level == 'Verbose':
+        elif self.log_level == 'Verbose':
+            logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
             Domoticz.Debugging(1+2+4+8+16+64)
             DumpConfigToLog()
-            #logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.DEBUG)
-            logging.basicConfig(level=logging.DEBUG)
+        else:
+            logging.basicConfig(format='%(asctime)s - %(levelname)-8s - %(filename)-18s - %(message)s', filename=self.log_filename,level=logging.INFO)
 
-        Domoticz.Log("starting plugin version "+Parameters["Version"])
+        Domoticz.Log("Starting Sessy Battery plugin version "+Parameters["Version"]+", logging to file {0}".format(self.log_filename))
         logging.info("starting plugin version "+Parameters["Version"])
         #Domoticz.Heartbeat(10)
         
@@ -536,7 +535,8 @@ class SessyBase():
         return response
 
 class SessyBattery(SessyBase):
-    dynamicScheduleAPI = '/api/v1/dynamic/schedule'
+    #dynamicScheduleAPI = '/api/v1/dynamic/schedule'
+    dynamicScheduleAPI = '/api/v2/dynamic/schedule'
     #dynamicScheduleAPI = '/api/v1/energy/status'
     energyAPI = '/api/v1/energy/status'
     powerAPI = '/api/v1/power/status'
@@ -546,9 +546,11 @@ class SessyBattery(SessyBase):
     def getDynamicSchedule(self):
         dt_format = "%Y-%m-%d"
         data = self.GetDataFromDevice(self.dynamicScheduleAPI)
-        logging.debug("dynamic scheule for '" + str(SessyBase.name) + "': '"+str(data))
-        if "power_strategy" not in data or len(data["power_strategy"]) < 1:
+        logging.debug("dynamic schedule for '" + str(SessyBase.name) + "': '"+str(data))
+        if "dynamic_schedule" not in data or len(data["dynamic_schedule"]) < 1:
             raise exceptions.ScheduleError("power strategy", datetime.now().strftime(dt_format))
+        # if "power_strategy" not in data or len(data["power_strategy"]) < 1:
+            # raise exceptions.ScheduleError("power strategy", datetime.now().strftime(dt_format))
         if "energy_prices" not in data or len(data["energy_prices"]) < 1:
             raise exceptions.ScheduleError("energy prices", datetime.now().strftime(dt_format))
         return data
@@ -756,6 +758,7 @@ def UpdateDevice(Device, Unit, nValue, sValue, AlwaysUpdate=False, Name=""):
                     Devices[Device].Units[Unit].nValue = nValue
                 else:
                     Domoticz.Log("nValue supplied is not an integer. Device: "+str(Device)+ " unit "+str(Unit)+" nValue "+str(nValue))
+                    logging.info("nValue supplied is not an integer. Device: "+str(Device)+ " unit "+str(Unit)+" nValue "+str(nValue))
                     Devices[Device].Units[Unit].nValue = int(nValue)
                 Devices[Device].Units[Unit].sValue = sValue
                 if Name != "":
@@ -768,6 +771,7 @@ def UpdateDevice(Device, Unit, nValue, sValue, AlwaysUpdate=False, Name=""):
                 # logging.error("Update of device failed: "+str(Unit)+"!")
     else:
         Domoticz.Error("trying to update a non-existent unit "+str(Unit)+" from device "+str(Device))
+        logging.error("trying to update a non-existent unit "+str(Unit)+" from device "+str(Device))
     return
 
 def calculateNewEnergy(Device, Unit, inputPower):
