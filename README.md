@@ -40,7 +40,7 @@ git pull https://github.com/JanJaapKo/SessyBattery
 
 ## Configuration
 First fill the ```config.json``` file in the plugin directory with the connection details for the batteries and the P1 unit.
-The plugin will encrypt and store your passwords safely in Domoticz configuration after the first successful run, so you can remove the `pwd` value from the file afterward if you wish.
+> **⚠️ Security Note:** The plugin will encrypt and store your passwords safely in Domoticz configuration after the first successful run. **You should remove the `pwd` field from `config.json` afterward to avoid storing plaintext passwords.**
 Example:
 ```
 {
