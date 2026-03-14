@@ -19,6 +19,7 @@
         Connects to Sessy batteries and P1 dongle.
         <h2>Configuration</h2>
         Configuration of the plugin is a 2 step action: the plugin here in Domoticz and a json file in the plugin directory.<br/><br/>
+        IMPORTANT: remove the pwd from the json file after first start, the plugin will move it to the Domoticz configuration and encrypt it there. If you don't do this, your password will be stored in plaintext in the json file.<br/><br/>
         
     </description>
     <params>
