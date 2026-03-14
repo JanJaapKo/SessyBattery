@@ -17,8 +17,10 @@ planned developments:
 The following Python modules installed
 ```
 sudo apt-get update
-sudo apt-get install python3-requests
+sudo apt-get install python3-requests python3-cryptography
 ```
+
+> 🔐 Passwords are encrypted using Fernet and stored securely in Domoticz configuration (not in plain text).  If `python3-cryptography` is missing, the plugin will fall back to using plaintext passwords.
 
 ## Installation
 
@@ -38,6 +40,7 @@ git pull https://github.com/JanJaapKo/SessyBattery
 
 ## Configuration
 First fill the ```config.json``` file in the plugin directory with the connection details for the batteries and the P1 unit.
+The plugin will encrypt and store your passwords safely in Domoticz configuration after the first successful run, so you can remove the `pwd` value from the file afterward if you wish.
 Example:
 ```
 {

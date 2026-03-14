@@ -58,8 +58,24 @@ import logging
 import json
 import time
 import requests
+import os
+import re
 from datetime import datetime, timedelta
 import exceptions
+
+# Optional encryption support (Fernet symmetric encryption)
+try:
+    from cryptography.fernet import Fernet, InvalidToken
+    _HAS_CRYPTO = True
+except ImportError:
+    # cryptography not installed; fall back to plaintext password usage
+    try:
+        Domoticz.Error("python-cryptography not installed: passwords will be used in plaintext. Install python3-cryptography to enable encryption.")
+    except Exception:
+        pass
+    Fernet = None
+    InvalidToken = Exception
+    _HAS_CRYPTO = False
 
 P1_FACTOR = 10 # number of battery polls before polling P1
 dt_format = "%Y-%m-%d %H:%M:%S"
@@ -125,7 +141,79 @@ class SessyBatteryPlugin:
     runCounter = 6
     p1Counter = P1_FACTOR
     system_name  = "Sessy system"
-    
+
+    def _get_password_config_key(self, config):
+        """Return a stable Domoticz configuration key for storing an encrypted password."""
+        name = str(config.get("name", "")).strip().lower()
+        ip = str(config.get("ip", "")).strip()
+        key = f"sessy_pwd_{name}_{ip}"
+        key = re.sub(r'[^a-z0-9_]', '_', key)
+        return key
+
+    def _init_encryption(self):
+        """Initialize Fernet encryption using a key file in the plugin folder."""
+        self._fernet = None
+        if not _HAS_CRYPTO:
+            Domoticz.Debug("Cryptography library not available, passwords will be used in plaintext.")
+            return
+
+        key_path = os.path.join(Parameters.get('HomeFolder', ''), 'sessy_fernet.key')
+        try:
+            if os.path.exists(key_path):
+                with open(key_path, 'rb') as f:
+                    key = f.read()
+            else:
+                key = Fernet.generate_key()
+                with open(key_path, 'wb') as f:
+                    f.write(key)
+            self._fernet = Fernet(key)
+        except Exception as e:
+            Domoticz.Error("Failed to initialize encryption key: " + str(e))
+            self._fernet = None
+
+    def _encrypt_password(self, plaintext):
+        if not self._fernet:
+            raise RuntimeError("Encryption not initialized")
+        return self._fernet.encrypt(plaintext.encode('utf-8')).decode('utf-8')
+
+    def _decrypt_password(self, token):
+        if not self._fernet:
+            raise RuntimeError("Encryption not initialized")
+        if isinstance(token, str):
+            token = token.encode('utf-8')
+        return self._fernet.decrypt(token).decode('utf-8')
+
+    def _get_password_from_config(self, config):
+        """Return password, using Domoticz configuration storage to keep it encrypted."""
+        pwd = config.get("pwd", "")
+
+        key = self._get_password_config_key(config)
+        stored = None
+        try:
+            stored = getConfigItem(key, Default=None)
+        except Exception:
+            stored = None
+
+        if stored and isinstance(stored, str):
+            if self._fernet:
+                try:
+                    return self._decrypt_password(stored)
+                except InvalidToken:
+                    Domoticz.Error(f"Failed decrypting password for '{config.get('name')}' (invalid token). Using config file password.")
+                except Exception as e:
+                    Domoticz.Error(f"Failed decrypting password for '{config.get('name')}': {e}. Using config file password.")
+            else:
+                Domoticz.Debug("Encryption not available, using plaintext password from config file.")
+
+        if self._fernet and pwd:
+            try:
+                enc = self._encrypt_password(pwd)
+                setConfigItem(key, enc)
+                Domoticz.Log(f"Encrypted password for '{config.get('name')}' stored in Domoticz configuration.")
+            except Exception as e:
+                Domoticz.Error(f"Failed to encrypt/store password for '{config.get('name')}': {e}")
+        return pwd
+
     def onStart(self):
         self.log_filename = "sessy_"+Parameters["Name"]+".log"
         Domoticz.Log('Plugin starting new version')
@@ -171,7 +259,14 @@ class SessyBatteryPlugin:
                 logging.error("JSON error in config file. Error: '" + str(theError.msg) + "' at position: line " + str(theError.lineno) + " column "+ str(theError.colno))
                 return
         logging.debug("config map = "+ str(config_map))
-        
+
+        # Initialize encryption and migrate plaintext passwords into Domoticz configuration
+        self._init_encryption()
+        for entry in config_map.get("p1meter", []):
+            entry["pwd"] = self._get_password_from_config(entry)
+        for entry in config_map.get("batteries", []):
+            entry["pwd"] = self._get_password_from_config(entry)
+
         # create the p1 meter first
         self.createP1Units("Sessy P1")
         self.p1unit = SessyP1(config_map["p1meter"][0])
