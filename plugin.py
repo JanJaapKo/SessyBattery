@@ -375,7 +375,7 @@ class SessyBatteryPlugin:
         logging.debug("Polling unit in " + str(self.runCounter) + " heartbeats.")
 
     def onCommand(self, DeviceID, Unit, Command, Level, Hue):
-        logging.debug("onCommand called for Device '" + str(DeviceID) + "', Unit '" + str(Unit) + "': Parameter '" + str(Command) + "', Level: " + str(Level))
+        logging.info("onCommand called for Device '" + str(DeviceID) + "', Unit '" + str(Unit) + "': Parameter '" + str(Command) + "', Level: " + str(Level))
         if Unit == self.batStrategyUnit:
             strat = PowerStrategy("")
             strat.state = Level/10
