@@ -13,7 +13,7 @@
 # Domoticz plugin to handle communction to Sessy bateries
 #
 """
-<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="0.1.9" externallink="https://github.com/JanJaapKo/SessyBattery">
+<plugin key="SessyBattery" name="Sessy battery" author="Jan-Jaap Kostelijk" version="1.0.1" externallink="https://github.com/JanJaapKo/SessyBattery">
     <description>
         <h2>Sessy Battery plugin</h2><br/>
         Connects to Sessy batteries and P1 dongle.
@@ -154,7 +154,8 @@ class SessyBatteryPlugin:
         """Initialize Fernet encryption using a key file in the plugin folder."""
         self._fernet = None
         if not _HAS_CRYPTO:
-            Domoticz.Debug("Cryptography library not available, passwords will be used in plaintext.")
+            Domoticz.Log("Cryptography library not available, passwords will be used in plaintext.")
+            logging.info("Cryptography library not available, passwords will be used in plaintext.")
             return
 
         key_path = os.path.join(Parameters.get('HomeFolder', ''), 'sessy_fernet.key')
@@ -169,6 +170,7 @@ class SessyBatteryPlugin:
             self._fernet = Fernet(key)
         except Exception as e:
             Domoticz.Error("Failed to initialize encryption key: " + str(e))
+            logging.error("Failed to initialize encryption key: " + str(e))
             self._fernet = None
 
     def _encrypt_password(self, plaintext):
@@ -828,18 +830,19 @@ def setConfigItem(Key=None, Value=None):
 
     # Generic helper functions
 def DumpConfigToLog():
-    Domoticz.Debug("Parameter count: " + str(len(Parameters)))
+    Domoticz.Debug("Config will be dumped to log file")
+    logging.debug("Parameter count: " + str(len(Parameters)))
     for x in Parameters:
         if Parameters[x] != "":
-            Domoticz.Debug( "Parameter '" + x + "':'" + str(Parameters[x]) + "'")
+            logging.debug( "Parameter '" + x + "':'" + str(Parameters[x]) + "'")
     Configurations = getConfigItem()
-    Domoticz.Debug("Configuration count: " + str(len(Configurations)))
+    logging.debug("Configuration count: " + str(len(Configurations)))
     for x in Configurations:
         if Configurations[x] != "":
-            Domoticz.Debug( "Configuration '" + x + "':'" + str(Configurations[x]) + "'")
-    Domoticz.Debug("Device count: " + str(len(Devices)))
+            logging.debug( "Configuration '" + x + "':'" + str(Configurations[x]) + "'")
+    logging.debug("Device count: " + str(len(Devices)))
     for x in Devices:
-        Domoticz.Debug("Device:           " + str(x) + " - " + str(Devices[x]))
+        logging.debug("Device:           " + str(x) + " - " + str(Devices[x]))
     return
 
 def UpdateDevice(Device, Unit, nValue, sValue, AlwaysUpdate=False, Name=""):
