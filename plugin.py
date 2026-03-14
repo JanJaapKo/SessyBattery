@@ -71,6 +71,7 @@ except ImportError:
     # cryptography not installed; fall back to plaintext password usage
     try:
         Domoticz.Error("python-cryptography not installed: passwords will be used in plaintext. Install python3-cryptography to enable encryption.")
+        logging.error("python-cryptography not installed: passwords will be used in plaintext. Install python3-cryptography to enable encryption.")
     except Exception:
         pass
     Fernet = None
@@ -202,18 +203,22 @@ class SessyBatteryPlugin:
                     return self._decrypt_password(stored)
                 except InvalidToken:
                     Domoticz.Error(f"Failed decrypting password for '{config.get('name')}' (invalid token). Using config file password.")
+                    logging.error(f"Failed decrypting password for '{config.get('name')}' (invalid token). Using config file password.")
                 except Exception as e:
                     Domoticz.Error(f"Failed decrypting password for '{config.get('name')}': {e}. Using config file password.")
+                    logging.error(f"Failed decrypting password for '{config.get('name')}': {e}. Using config file password.")
             else:
-                Domoticz.Debug("Encryption not available, using plaintext password from config file.")
+                logging.debug("Encryption not available, using plaintext password from config file.")
 
         if self._fernet and pwd:
             try:
                 enc = self._encrypt_password(pwd)
                 setConfigItem(key, enc)
                 Domoticz.Log(f"Encrypted password for '{config.get('name')}' stored in Domoticz configuration.")
+                logging.info(f"Encrypted password for '{config.get('name')}' stored in Domoticz configuration.")
             except Exception as e:
                 Domoticz.Error(f"Failed to encrypt/store password for '{config.get('name')}': {e}")
+                logging.error(f"Failed to encrypt/store password for '{config.get('name')}': {e}")
         return pwd
 
     def onStart(self):
