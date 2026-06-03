@@ -691,17 +691,17 @@ class SessyBatteryPlugin:
         if deviceId not in Devices or (self.p1CurrentL3Unit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Current L3', Unit=self.p1CurrentL3Unit, Type=243, Subtype=23, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerConsumedL1Unit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Power consumed L1', Unit=self.p1PowerConsumedL1Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Power consumed L1', Unit=self.p1PowerConsumedL1Unit, TypeName="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerConsumedL2Unit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Power consumed L2', Unit=self.p1PowerConsumedL2Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Power consumed L2', Unit=self.p1PowerConsumedL2Unit, TypeName="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerConsumedL3Unit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Power consumed L3', Unit=self.p1PowerConsumedL3Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Power consumed L3', Unit=self.p1PowerConsumedL3Unit, TypeName="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerProducedL1Unit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Power produced L1', Unit=self.p1PowerProducedL1Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Power produced L1', Unit=self.p1PowerProducedL1Unit, TypeName="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerProducedL2Unit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Power produced L2', Unit=self.p1PowerProducedL2Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Power produced L2', Unit=self.p1PowerProducedL2Unit, TypeName="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerProducedL3Unit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Power produced L3', Unit=self.p1PowerProducedL3Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Power produced L3', Unit=self.p1PowerProducedL3Unit, TypeName="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerFailureUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Power failures', Unit=self.p1PowerFailureUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1LongPowerFailureUnit not in Devices[deviceId].Units):
