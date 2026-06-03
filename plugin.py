@@ -719,7 +719,7 @@ class SessyBatteryPlugin:
         if deviceId not in Devices or (self.p1VoltageSwellL3Unit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Voltage swell L3', Unit=self.p1VoltageSwellL3Unit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1GasMeterUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Gas meter', Unit=self.p1GasMeterUnit, TypeName="General", Subtype=19, Used=1, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Gas meter', Unit=self.p1GasMeterUnit, TypeName="P1 Smart Meter", Subtype=2, Used=1, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1GasMeterTimeUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Gas meter timestamp', Unit=self.p1GasMeterTimeUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
 
@@ -743,7 +743,9 @@ class SessyBatteryPlugin:
         if "power_produced" in data:
             UpdateDevice(deviceId, self.p1PowerProducedUnit, 0, str(data["power_produced"]))
         if all(key in data for key in ["power_consumed_tariff1", "power_consumed_tariff2", "power_produced_tariff1", "power_produced_tariff2", "power_consumed", "power_produced"]):
-            energyValue = ";".join([str(data["power_consumed_tariff1"]), str(data["power_consumed_tariff2"]), str(data["power_produced_tariff1"]), str(data["power_produced_tariff2"]), str(data["power_consumed"]), str(data["power_produced"])])
+            total_consumed = data["power_consumed_tariff1"] + data["power_consumed_tariff2"]
+            total_produced = data["power_produced_tariff1"] + data["power_produced_tariff2"]
+            energyValue = ";".join([str(total_consumed), "0", str(total_produced), "0", str(data["power_consumed"]), str(data["power_produced"])])
             UpdateDevice(deviceId, self.p1EnergyUnit, 0, energyValue)
         if "voltage_l1" in data:
             UpdateDevice(deviceId, self.p1VoltageL1Unit, 0, str(round(data["voltage_l1"]/1000, 1)))
