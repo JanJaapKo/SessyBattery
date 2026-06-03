@@ -1,0 +1,434 @@
+openapi: 3.0.3
+info:
+  title: Sessy API
+  description: |-
+    This is an overview of everything you can view and change in your P1 meter via its API. You can use it to geek out on stats at home, or integrate into your home automation.
+    Wouldn't it be cool to have Sessy's P1 meter talk to all kinds of home automation software out there? Enjoy!
+  version: 1.1.4
+tags:
+  - name: P1 Meter
+    description: |-
+      A way to request power metrics. 
+      Note: not all meters provide all data, data that is unavailable will be 0.
+  - name: Modbus
+    description: |-
+      A way to request power metrics, from the modbus meter.
+  - name: Grid target
+    description: |-
+      Give an offset to the 'null on the meter' strategy, for Sessy's that are in the NOM strategy.
+paths:
+  /api/v2/p1/details:
+    get:
+      tags:
+        - P1 Meter
+      summary: Returns power and state metrics of the P1 meter
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/p1_details'
+        '500':
+          description: An error occurred (error message in response body)
+
+  /api/v1/modbus/details:
+    get:
+      tags:
+        - Modbus
+      summary: Returns details as reported by meter connected via modbus.
+      responses:
+        '200':
+          description: Succesful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/modbus_details'
+        '500':
+          description: An error occurred (message in response body)
+
+  /api/v1/meter/grid_target:
+    get:
+      tags:
+        - Grid target
+      summary: Returns the grid target
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/grid_target_get'
+        '500':
+          description: An error occurred
+    post:
+      tags:
+        - Grid target
+      summary: Sets the grid_target
+      requestBody:
+        description: Sets grid target
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/grid_target_post'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api_ok_response'
+        '500':
+          description: An error occurred (error message in response body)
+
+components:
+  schemas:
+    modbus_details:
+      required:
+        - phase_1
+        - phase_2
+        - phase_3
+        - total_power
+        - total_import
+        - total_export
+        - device_type
+        - device_uid
+        - time_since
+        - state
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        phase_1:
+          type: object
+          description: Details of phase 1
+          required:
+            - voltage
+            - current
+            - power
+          properties:
+            voltage:
+              type: number
+              example: 1234
+              description: Voltage in mV
+            current:
+              type: number
+              example: 1234
+              description: Current in mA
+            power:
+              type: number
+              example: 1234
+              description: Power in W
+        phase_2:
+          type: object
+          description: Details of phase 2
+          required:
+            - voltage
+            - current
+            - power
+          properties:
+            voltage:
+              type: number
+              example: 1234
+              description: Voltage in mV
+            current:
+              type: number
+              example: 1234
+              description: Current in mA
+            power:
+              type: number
+              example: 1234
+              description: Power in W
+        phase_3:
+          type: object
+          description: Details of phase 3
+          required:
+            - voltage
+            - current
+            - power
+          properties:
+            voltage:
+              type: number
+              example: 1234
+              description: Voltage in mV
+            current:
+              type: number
+              example: 1234
+              description: Current in mA
+            power:
+              type: number
+              example: 1234
+              description: Power in W
+        total_power:
+          type: number
+          example: 1234
+          description: Total power across all phases in W
+        total_import:
+          type: number
+          example: 1234
+          description: Total energy import in Wh
+        total_export:
+          type: number
+          example: 1234
+          description: Total energy export in Wh
+        device_type:
+          type: string
+          example: EASTRON_SDM630
+          enum:
+            - EASTRON_SDM630
+            - EASTRON_SDM230
+            - EASTRON_SDM120
+          description: Name of the selected modbus device type.
+        device_uid:
+          type: string
+          example: C001C001
+          description: Some kind of unique identifier, such as a serial number. Availability depends on the device type.
+        time_since:
+          type: number
+          example: 4321
+          description: How long ago this data was received from the external meter, in milliseconds.
+        state:
+          type: string
+          example: MODBUS_OK
+          enum:
+            - MODBUS_DISABLED
+            - MODBUS_OK
+            - MODBUS_ERROR
+            - MODBUS_UNSUPPORTED
+          description: Most recent state of the modbus driver.
+
+    p1_details:
+      required:
+        - status
+        - state
+        - dsmr_version
+        - header_info
+        - equipment_identifier
+        - date_time
+        - power_consumed_tariff1
+        - power_produced_tariff1
+        - power_consumed_tariff2
+        - power_produced_tariff2
+        - tariff_indicator
+        - power_consumed
+        - power_produced
+        - power_total
+        - power_failure_any_phase
+        - long_power_failure_any_phase
+        - voltage_sag_count_l1
+        - voltage_sag_count_l2
+        - voltage_sag_count_l3
+        - voltage_swell_count_l1
+        - voltage_swell_count_l2
+        - voltage_swell_count_l3
+        - voltage_l1
+        - voltage_l2
+        - voltage_l3
+        - current_l1
+        - current_l2
+        - current_l3
+        - power_consumed_l1
+        - power_consumed_l2
+        - power_consumed_l3
+        - power_produced_l1
+        - power_produced_l2
+        - power_produced_l3
+        - gas_meter_equipment_identifier
+        - gas_meter_value_time
+        - gas_meter_value
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        state:
+          type: string
+          example: P1_OK
+          enum:
+            - P1_NOT_CONNECTED
+            - P1_DATAVALIDITY_ERR
+            - P1_VERSION_ERR
+            - P1_PARSE_ERR
+            - P1_OK
+        dsmr_version:
+          type: number
+          example: 42
+          description: The dsmr version if the p1 meter
+        header_info:
+          type: string
+          example: X5LGABCDB1234
+          description: P1 header, manufacturer specific. Usually containing some type of model name
+        equipment_identifier:
+          type: string
+          example: 4394797492374932749823790
+          description: The unique string of characters used to identify the p1 meter
+        date_time:
+          type: string
+          example: 150117180000W
+          description:
+            Time of the last p1 message.
+            YYMMDDhhmmssX.
+            ASCII presentation of Time stamp with
+            Year, Month, Day, Hour, Minute, Second,
+            and an indication whether DST is active
+            (X=S) or DST is not active (X=W).
+        power_consumed_tariff1:
+          type: number
+          example: 34567854
+          description: The energy used during tariff 1 in wh
+        power_produced_tariff1:
+          type: number
+          example: 638632
+          description: The energy produced during tariff 1 in wh
+        power_consumed_tariff2:
+          type: number
+          example: 34567854
+          description: The energy used during tariff 2 in wh
+        power_produced_tariff2:
+          type: number
+          example: 638632
+          description: The energy produced during tariff 2 in wh
+        tariff_indicator:
+          type: number
+          example: 1
+          description: Indicates that tariff is currently in use
+        power_consumed:
+          type: number
+          example: 3000
+          description: Indicates the total power in Watts measured by the p1 meter being drawn from the electricity grid
+        power_produced:
+          type: number
+          example: 750
+          description: Indicates the total power in Watts measured by the p1 meter going into the electricity grid
+        power_total:
+          type: number
+          example: 2250
+          description: Indicates the net power in Watts measured by the p1 meter
+        power_failure_any_phase:
+          type: number
+          example: 3
+          description: Number of power failures in any phase
+        long_power_failure_any_phase:
+          type: number
+          example: 1
+          description: Number of long power failures in any phase
+        voltage_sag_count_l1:
+          type: number
+          example: 3
+          description: Number of voltage sags in phase 1
+        voltage_sag_count_l2:
+          type: number
+          example: 4
+          description: Number of voltage sags in phase 2
+        voltage_sag_count_l3:
+          type: number
+          example: 5
+          description: Number of voltage sags in phase 3
+        voltage_swell_count_l1:
+          type: number
+          example: 3
+          description: Number of voltage swells in phase 1
+        voltage_swell_count_l2:
+          type: number
+          example: 4
+          description: Number of voltage swells in phase 2
+        voltage_swell_count_l3:
+          type: number
+          example: 5
+          description: Number of voltage swells in phase 3
+        voltage_l1:
+          type: number
+          example: 231123
+          description: Phase voltage measured by the p1 meter in milli volts
+        voltage_l2:
+          type: number
+          example: 232321
+          description: Phase voltage measured by the p1 meter in milli volts
+        voltage_l3:
+          type: number
+          example: 233456
+          description: Phase voltage measured by the p1 meter in milli volts
+        current_l1:
+          type: number
+          example: 2000
+          description: Phase current measured by the p1 meter in milli amps
+        current_l2:
+          type: number
+          example: 1000
+          description: Phase current measured by the p1 meter in milli amps
+        current_l3:
+          type: number
+          example: 3000
+          description: Phase current measured by the p1 meter in milli amps
+        power_consumed_l1:
+          type: number
+          example: 300
+          description: The power currently being consumed by phase 1
+        power_consumed_l2:
+          type: number
+          example: 0
+          description: The power currently being consumed by phase 2
+        power_consumed_l3:
+          type: number
+          example: 0
+          description: The power currently being consumed by phase 3
+        power_produced_l1:
+          type: number
+          example: 0
+          description: The power currently being produced by phase 1
+        power_produced_l2:
+          type: number
+          example: 450
+          description: The power currently being produced by phase 2
+        power_produced_l3:
+          type: number
+          example: 500
+          description: The power currently being produced by phase 3
+        gas_meter_equipment_identifier:
+          type: string
+          example: 4394797492374932749823790
+          description: The unique string of characters used to identify the gas meter
+        gas_meter_value_time:
+          type: string
+          example: 150117180000W
+          description:
+            YYMMDDhhmmssX.
+            ASCII presentation of Time stamp with
+            Year, Month, Day, Hour, Minute, Second,
+            and an indication whether DST is active
+            (X=S) or DST is not active (X=W).
+        gas_meter_value:
+          type: number
+          example: 473789
+          description: The gas used at the time of gas_meter_value_time, in dm3
+    grid_target_get:
+      required:
+        - status
+        - grid_target
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        grid_target:
+          type: integer
+          example: 0
+          description: Power to subtract from the measured power of the meter
+    grid_target_post:
+      required:
+        - grid_target
+      type: object
+      properties:
+        grid_target:
+          type: integer
+          example: 0
+          description: Power to subtract from the measured power of the meter
+    api_ok_response:
+      required:
+        - status
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"

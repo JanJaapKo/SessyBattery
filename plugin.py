@@ -135,10 +135,68 @@ class SessyBatteryPlugin:
     batStrategyUnit = 23
     # 24: sensor type '?', 'Power setpoint'
     batPowerSetpointUnit = 24
-    # 24: sensor type '?', 'Error/warning'
+    # 25: sensor type '?', 'Error/warning'
     batErrorWarning = 25
-    # 24: sensor type 'switch', 
+    # 26: sensor type 'switch', 
     batStrategyOverridden = 26
+    # 27: sensor type 'Electric (Instant+Counter)', 'P1 energy'
+    p1EnergyUnit = 27
+    # 28: sensor type 'Usage (Electric)', 'P1 total power'
+    p1PowerTotalUnit = 28
+    # 29: sensor type 'Usage (Electric)', 'P1 power consumed'
+    p1PowerConsumedUnit = 29
+    # 30: sensor type 'Usage (Electric)', 'P1 power produced'
+    p1PowerProducedUnit = 30
+    # 31: sensor type 'Text', 'P1 DSMR version'
+    p1DsmrVersionUnit = 31
+    # 32: sensor type 'Text', 'P1 equipment identifier'
+    p1EquipmentIdentifierUnit = 32
+    # 33: sensor type 'Text', 'P1 timestamp'
+    p1DateTimeUnit = 33
+    # 34: sensor type 'Voltage', 'P1 voltage L1'
+    p1VoltageL1Unit = 34
+    # 35: sensor type 'Voltage', 'P1 voltage L2'
+    p1VoltageL2Unit = 35
+    # 36: sensor type 'Voltage', 'P1 voltage L3'
+    p1VoltageL3Unit = 36
+    # 37: sensor type 'Ampere (1 Phase)', 'P1 current L1'
+    p1CurrentL1Unit = 37
+    # 38: sensor type 'Ampere (1 Phase)', 'P1 current L2'
+    p1CurrentL2Unit = 38
+    # 39: sensor type 'Ampere (1 Phase)', 'P1 current L3'
+    p1CurrentL3Unit = 39
+    # 40: sensor type 'Usage (Electric)', 'P1 power consumed L1'
+    p1PowerConsumedL1Unit = 40
+    # 41: sensor type 'Usage (Electric)', 'P1 power consumed L2'
+    p1PowerConsumedL2Unit = 41
+    # 42: sensor type 'Usage (Electric)', 'P1 power consumed L3'
+    p1PowerConsumedL3Unit = 42
+    # 43: sensor type 'Usage (Electric)', 'P1 power produced L1'
+    p1PowerProducedL1Unit = 43
+    # 44: sensor type 'Usage (Electric)', 'P1 power produced L2'
+    p1PowerProducedL2Unit = 44
+    # 45: sensor type 'Usage (Electric)', 'P1 power produced L3'
+    p1PowerProducedL3Unit = 45
+    # 46: sensor type 'Text', 'P1 power failures'
+    p1PowerFailureUnit = 46
+    # 47: sensor type 'Text', 'P1 long power failures'
+    p1LongPowerFailureUnit = 47
+    # 48: sensor type 'Text', 'P1 voltage sag L1'
+    p1VoltageSagL1Unit = 48
+    # 49: sensor type 'Text', 'P1 voltage sag L2'
+    p1VoltageSagL2Unit = 49
+    # 50: sensor type 'Text', 'P1 voltage sag L3'
+    p1VoltageSagL3Unit = 50
+    # 51: sensor type 'Text', 'P1 voltage swell L1'
+    p1VoltageSwellL1Unit = 51
+    # 52: sensor type 'Text', 'P1 voltage swell L2'
+    p1VoltageSwellL2Unit = 52
+    # 53: sensor type 'Text', 'P1 voltage swell L3'
+    p1VoltageSwellL3Unit = 53
+    # 54: sensor type 'Text', 'P1 gas meter value'
+    p1GasMeterUnit = 54
+    # 55: sensor type 'Text', 'P1 gas meter timestamp'
+    p1GasMeterTimeUnit = 55
 
     runCounter = 6
     p1Counter = P1_FACTOR
@@ -603,13 +661,139 @@ class SessyBatteryPlugin:
         #check, per device, if it has units. If not,create them 
         logging.debug("Creating units for: '" + deviceId +"'")
         if deviceId not in Devices or (self.p1TarifUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Tarif', Unit=self.p1TarifUnit, TypeName="General", Subtype=19, Used=1, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Tariff indicator', Unit=self.p1TarifUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1EnergyUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Energy counters', Unit=self.p1EnergyUnit, Type=243, Subtype=29, Used=1, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1PowerTotalUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Total power', Unit=self.p1PowerTotalUnit, Type=250, Subtype=1, Used=1, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1PowerConsumedUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Power consumed', Unit=self.p1PowerConsumedUnit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1PowerProducedUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Power produced', Unit=self.p1PowerProducedUnit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1MeterStateUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Meter state', Unit=self.p1MeterStateUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1DsmrVersionUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - DSMR version', Unit=self.p1DsmrVersionUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1EquipmentIdentifierUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Equipment identifier', Unit=self.p1EquipmentIdentifierUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1DateTimeUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Latest timestamp', Unit=self.p1DateTimeUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1VoltageL1Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Voltage L1', Unit=self.p1VoltageL1Unit, Type=243, Subtype=8, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1VoltageL2Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Voltage L2', Unit=self.p1VoltageL2Unit, Type=243, Subtype=8, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1VoltageL3Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Voltage L3', Unit=self.p1VoltageL3Unit, Type=243, Subtype=8, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1CurrentL1Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Current L1', Unit=self.p1CurrentL1Unit, Type=243, Subtype=23, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1CurrentL2Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Current L2', Unit=self.p1CurrentL2Unit, Type=243, Subtype=23, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1CurrentL3Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Current L3', Unit=self.p1CurrentL3Unit, Type=243, Subtype=23, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1PowerConsumedL1Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Power consumed L1', Unit=self.p1PowerConsumedL1Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1PowerConsumedL2Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Power consumed L2', Unit=self.p1PowerConsumedL2Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1PowerConsumedL3Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Power consumed L3', Unit=self.p1PowerConsumedL3Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1PowerProducedL1Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Power produced L1', Unit=self.p1PowerProducedL1Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1PowerProducedL2Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Power produced L2', Unit=self.p1PowerProducedL2Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1PowerProducedL3Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Power produced L3', Unit=self.p1PowerProducedL3Unit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1PowerFailureUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Power failures', Unit=self.p1PowerFailureUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1LongPowerFailureUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Long power failures', Unit=self.p1LongPowerFailureUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1VoltageSagL1Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Voltage sag L1', Unit=self.p1VoltageSagL1Unit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1VoltageSagL2Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Voltage sag L2', Unit=self.p1VoltageSagL2Unit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1VoltageSagL3Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Voltage sag L3', Unit=self.p1VoltageSagL3Unit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1VoltageSwellL1Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Voltage swell L1', Unit=self.p1VoltageSwellL1Unit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1VoltageSwellL2Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Voltage swell L2', Unit=self.p1VoltageSwellL2Unit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1VoltageSwellL3Unit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Voltage swell L3', Unit=self.p1VoltageSwellL3Unit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1GasMeterUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Gas meter value', Unit=self.p1GasMeterUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+        if deviceId not in Devices or (self.p1GasMeterTimeUnit not in Devices[deviceId].Units):
+            Domoticz.Unit(Name=deviceId + ' - Gas meter timestamp', Unit=self.p1GasMeterTimeUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
 
     def updateP1Units(self, deviceId, data):
         logging.debug("Updating units for: '" + deviceId +"'")
         if "tariff_indicator" in data:
             #1 is low tarif, 2 is high tarif
             UpdateDevice(deviceId, self.p1TarifUnit, 1, str(data["tariff_indicator"]))
+        if "state" in data:
+            UpdateDevice(deviceId, self.p1MeterStateUnit, 1, str(data["state"]))
+        if "dsmr_version" in data:
+            UpdateDevice(deviceId, self.p1DsmrVersionUnit, 1, str(data["dsmr_version"]))
+        if "equipment_identifier" in data:
+            UpdateDevice(deviceId, self.p1EquipmentIdentifierUnit, 1, str(data["equipment_identifier"]))
+        if "date_time" in data:
+            UpdateDevice(deviceId, self.p1DateTimeUnit, 1, str(data["date_time"]))
+        if "power_total" in data:
+            UpdateDevice(deviceId, self.p1PowerTotalUnit, 0, str(data["power_total"]))
+        if "power_consumed" in data:
+            UpdateDevice(deviceId, self.p1PowerConsumedUnit, 0, str(data["power_consumed"]))
+        if "power_produced" in data:
+            UpdateDevice(deviceId, self.p1PowerProducedUnit, 0, str(data["power_produced"]))
+        if all(key in data for key in ["power_consumed_tariff1", "power_consumed_tariff2", "power_produced_tariff1", "power_produced_tariff2", "power_consumed", "power_produced"]):
+            energyValue = ";".join([str(data["power_consumed_tariff1"]), str(data["power_consumed_tariff2"]), str(data["power_produced_tariff1"]), str(data["power_produced_tariff2"]), str(data["power_consumed"]), str(data["power_produced"])])
+            UpdateDevice(deviceId, self.p1EnergyUnit, 0, energyValue)
+        if "voltage_l1" in data:
+            UpdateDevice(deviceId, self.p1VoltageL1Unit, 0, str(round(data["voltage_l1"]/1000, 1)))
+        if "voltage_l2" in data:
+            UpdateDevice(deviceId, self.p1VoltageL2Unit, 0, str(round(data["voltage_l2"]/1000, 1)))
+        if "voltage_l3" in data:
+            UpdateDevice(deviceId, self.p1VoltageL3Unit, 0, str(round(data["voltage_l3"]/1000, 1)))
+        if "current_l1" in data:
+            UpdateDevice(deviceId, self.p1CurrentL1Unit, 0, str(round(data["current_l1"]/1000, 3)))
+        if "current_l2" in data:
+            UpdateDevice(deviceId, self.p1CurrentL2Unit, 0, str(round(data["current_l2"]/1000, 3)))
+        if "current_l3" in data:
+            UpdateDevice(deviceId, self.p1CurrentL3Unit, 0, str(round(data["current_l3"]/1000, 3)))
+        if "power_consumed_l1" in data:
+            UpdateDevice(deviceId, self.p1PowerConsumedL1Unit, 0, str(data["power_consumed_l1"]))
+        if "power_consumed_l2" in data:
+            UpdateDevice(deviceId, self.p1PowerConsumedL2Unit, 0, str(data["power_consumed_l2"]))
+        if "power_consumed_l3" in data:
+            UpdateDevice(deviceId, self.p1PowerConsumedL3Unit, 0, str(data["power_consumed_l3"]))
+        if "power_produced_l1" in data:
+            UpdateDevice(deviceId, self.p1PowerProducedL1Unit, 0, str(data["power_produced_l1"]))
+        if "power_produced_l2" in data:
+            UpdateDevice(deviceId, self.p1PowerProducedL2Unit, 0, str(data["power_produced_l2"]))
+        if "power_produced_l3" in data:
+            UpdateDevice(deviceId, self.p1PowerProducedL3Unit, 0, str(data["power_produced_l3"]))
+        if "power_failure_any_phase" in data:
+            UpdateDevice(deviceId, self.p1PowerFailureUnit, 1, str(data["power_failure_any_phase"]))
+        if "long_power_failure_any_phase" in data:
+            UpdateDevice(deviceId, self.p1LongPowerFailureUnit, 1, str(data["long_power_failure_any_phase"]))
+        if "voltage_sag_count_l1" in data:
+            UpdateDevice(deviceId, self.p1VoltageSagL1Unit, 1, str(data["voltage_sag_count_l1"]))
+        if "voltage_sag_count_l2" in data:
+            UpdateDevice(deviceId, self.p1VoltageSagL2Unit, 1, str(data["voltage_sag_count_l2"]))
+        if "voltage_sag_count_l3" in data:
+            UpdateDevice(deviceId, self.p1VoltageSagL3Unit, 1, str(data["voltage_sag_count_l3"]))
+        if "voltage_swell_count_l1" in data:
+            UpdateDevice(deviceId, self.p1VoltageSwellL1Unit, 1, str(data["voltage_swell_count_l1"]))
+        if "voltage_swell_count_l2" in data:
+            UpdateDevice(deviceId, self.p1VoltageSwellL2Unit, 1, str(data["voltage_swell_count_l2"]))
+        if "voltage_swell_count_l3" in data:
+            UpdateDevice(deviceId, self.p1VoltageSwellL3Unit, 1, str(data["voltage_swell_count_l3"]))
+        if "gas_meter_value" in data:
+            gas_value = data["gas_meter_value"]
+            try:
+                gas_reading = round(float(gas_value) / 1000, 3)
+            except Exception:
+                gas_reading = gas_value
+            UpdateDevice(deviceId, self.p1GasMeterUnit, 1, str(gas_reading))
+        if "gas_meter_value_time" in data:
+            UpdateDevice(deviceId, self.p1GasMeterTimeUnit, 1, str(data["gas_meter_value_time"]))
 
 class SessyBase():
     def __init__(self, config):
