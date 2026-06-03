@@ -665,11 +665,11 @@ class SessyBatteryPlugin:
         if deviceId not in Devices or (self.p1EnergyUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Energy counters', Unit=self.p1EnergyUnit, Type=243, Subtype=29, Used=1, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerTotalUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Total power', Unit=self.p1PowerTotalUnit, Type="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Total power', Unit=self.p1PowerTotalUnit, TypeName="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerConsumedUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Power consumed', Unit=self.p1PowerConsumedUnit, Type="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Power consumed', Unit=self.p1PowerConsumedUnit, TypeName="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerProducedUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Power produced', Unit=self.p1PowerProducedUnit, Type="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Power produced', Unit=self.p1PowerProducedUnit, TypeName="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1MeterStateUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Meter state', Unit=self.p1MeterStateUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1DsmrVersionUnit not in Devices[deviceId].Units):
