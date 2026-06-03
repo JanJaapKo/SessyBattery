@@ -193,7 +193,7 @@ class SessyBatteryPlugin:
     p1VoltageSwellL2Unit = 52
     # 53: sensor type 'Text', 'P1 voltage swell L3'
     p1VoltageSwellL3Unit = 53
-    # 54: sensor type 'Text', 'P1 gas meter value'
+    # 54: sensor type 'Text', 'P1 gas meter'
     p1GasMeterUnit = 54
     # 55: sensor type 'Text', 'P1 gas meter timestamp'
     p1GasMeterTimeUnit = 55
@@ -665,11 +665,11 @@ class SessyBatteryPlugin:
         if deviceId not in Devices or (self.p1EnergyUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Energy counters', Unit=self.p1EnergyUnit, Type=243, Subtype=29, Used=1, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerTotalUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Total power', Unit=self.p1PowerTotalUnit, Type=250, Subtype=1, Used=1, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Total power', Unit=self.p1PowerTotalUnit, Type="Usage", Subtype=1, Used=1, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerConsumedUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Power consumed', Unit=self.p1PowerConsumedUnit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Power consumed', Unit=self.p1PowerConsumedUnit, Type="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1PowerProducedUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Power produced', Unit=self.p1PowerProducedUnit, Type=250, Subtype=1, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Power produced', Unit=self.p1PowerProducedUnit, Type="Usage", Subtype=1, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1MeterStateUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Meter state', Unit=self.p1MeterStateUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1DsmrVersionUnit not in Devices[deviceId].Units):
@@ -719,7 +719,7 @@ class SessyBatteryPlugin:
         if deviceId not in Devices or (self.p1VoltageSwellL3Unit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Voltage swell L3', Unit=self.p1VoltageSwellL3Unit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1GasMeterUnit not in Devices[deviceId].Units):
-            Domoticz.Unit(Name=deviceId + ' - Gas meter value', Unit=self.p1GasMeterUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
+            Domoticz.Unit(Name=deviceId + ' - Gas meter', Unit=self.p1GasMeterUnit, TypeName="General", Subtype=19, Used=1, DeviceID=deviceId).Create()
         if deviceId not in Devices or (self.p1GasMeterTimeUnit not in Devices[deviceId].Units):
             Domoticz.Unit(Name=deviceId + ' - Gas meter timestamp', Unit=self.p1GasMeterTimeUnit, TypeName="General", Subtype=19, Used=0, DeviceID=deviceId).Create()
 
